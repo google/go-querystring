@@ -10,50 +10,84 @@ import (
 
 func TestValues_types(t *testing.T) {
 	str := "string"
-	s := struct {
-		A string
-		B int
-		C uint
-		D float32
-		E bool
-		F *string
-		G []string
-		H [1]string
-		I []string `url:",comma"`
-		J []string `url:",space"`
-		K time.Time
-		L time.Time `url:",unix"`
+
+	tests := []struct {
+		in   interface{}
+		want url.Values
 	}{
-		F: &str,
-		G: []string{"a", "b"},
-		H: [1]string{"a"},
-		I: []string{"a", "b"},
-		J: []string{"a", "b"},
-		K: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
-		L: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+		{
+			// basic primitives
+			struct {
+				A string
+				B int
+				C uint
+				D float32
+				E bool
+			}{},
+			url.Values{
+				"A": {""},
+				"B": {"0"},
+				"C": {"0"},
+				"D": {"0"},
+				"E": {"false"},
+			},
+		},
+		{
+			// pointers
+			struct{ A *string }{A: &str},
+			url.Values{"A": {str}},
+		},
+		{
+			// slices and arrays
+			struct {
+				A []string
+				B []string `url:",comma"`
+				C []string `url:",space"`
+				D [2]string
+				E [2]string `url:",comma"`
+				F [2]string `url:",space"`
+			}{
+				A: []string{"a", "b"},
+				B: []string{"a", "b"},
+				C: []string{"a", "b"},
+				D: [2]string{"a", "b"},
+				E: [2]string{"a", "b"},
+				F: [2]string{"a", "b"},
+			},
+			url.Values{
+				"A": {"a", "b"},
+				"B": {"a,b"},
+				"C": {"a b"},
+				"D": {"a", "b"},
+				"E": {"a,b"},
+				"F": {"a b"},
+			},
+		},
+		{
+			// other types
+			struct {
+				A time.Time
+				B time.Time `url:",unix"`
+			}{
+				A: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+				B: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+			},
+			url.Values{
+				"A": {"2000-01-01T12:34:56Z"},
+				"B": {"946730096"},
+			},
+		},
 	}
 
-	v, err := Values(s)
-	if err != nil {
-		t.Errorf("Values(%q) returned error: %v", s, err)
-	}
+	for i, tt := range tests {
+		v, err := Values(tt.in)
+		if err != nil {
+			t.Errorf("%d. Values(%q) returned error: %v", i, tt.in, err)
+		}
 
-	want := url.Values{
-		"A": {""},
-		"B": {"0"},
-		"C": {"0"},
-		"D": {"0"},
-		"E": {"false"},
-		"F": {"string"},
-		"G": {"a", "b"},
-		"H": {"a"},
-		"I": {"a,b"},
-		"J": {"a b"},
-		"K": {"2000-01-01T12:34:56Z"},
-		"L": {"946730096"},
-	}
-	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+		if !reflect.DeepEqual(tt.want, v) {
+			t.Errorf("%d. Values(%q) returned %v, want %v", i, tt.in, v, tt.want)
+		}
 	}
 }
 
