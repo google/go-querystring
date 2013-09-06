@@ -9,13 +9,16 @@ import (
 
 func TestValues(t *testing.T) {
 	s := struct {
-		A string `url:"a,omitempty"`
+		A string `url:"a"`
 		B int
 		C string
 		D string `url:"-"`
+		E string `url:",omitempty"`
+		F string `url:",omitempty"`
 	}{
 		A: "abc",
 		B: 1,
+		F: "foo",
 	}
 	v, err := Values(s)
 	if err != nil {
@@ -26,6 +29,7 @@ func TestValues(t *testing.T) {
 		"a": {"abc"},
 		"B": {"1"},
 		"C": {""},
+		"F": {"foo"},
 	}
 	if !reflect.DeepEqual(want, v) {
 		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
