@@ -34,6 +34,7 @@ func TestValues_types(t *testing.T) {
 
 func TestValues_tags(t *testing.T) {
 	s := struct {
+		a string
 		A string
 		B string `url:"so,omitempty"`
 		C string `url:"-"`

@@ -18,6 +18,9 @@ func Values(v interface{}) (url.Values, error) {
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
+		if sf.PkgPath != "" { // unexported
+			continue
+		}
 
 		tag := sf.Tag.Get("url")
 		if tag == "-" {
