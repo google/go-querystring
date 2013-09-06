@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"time"
 )
+
+var timeType = reflect.TypeOf(time.Time{})
 
 // Values returns the url.Values encoding of v.
 func Values(v interface{}) (url.Values, error) {
@@ -46,7 +49,17 @@ func Values(v interface{}) (url.Values, error) {
 				values.Add(name, fmt.Sprint(sv.Index(i)))
 			}
 		default:
-			values.Add(name, fmt.Sprint(sv.Interface()))
+			switch sv.Type() {
+			case timeType:
+				t := sv.Interface().(time.Time)
+				if opts.Contains("unix") {
+					values.Add(name, fmt.Sprint(t.Unix()))
+				} else {
+					values.Add(name, t.Format(time.RFC3339))
+				}
+			default:
+				values.Add(name, fmt.Sprint(sv.Interface()))
+			}
 		}
 	}
 
@@ -68,5 +81,11 @@ func isEmptyValue(v reflect.Value) bool {
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	}
+
+	switch v.Type() {
+	case timeType:
+		return v.Interface().(time.Time).IsZero()
+	}
+
 	return false
 }

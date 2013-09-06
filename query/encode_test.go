@@ -3,6 +3,7 @@ package query
 import (
 	"net/url"
 	"reflect"
+	"time"
 
 	"testing"
 )
@@ -18,11 +19,16 @@ func TestValues_types(t *testing.T) {
 		F *string
 		G []string
 		H [1]string
+		I time.Time
+		J time.Time `url:",unix"`
 	}{
 		F: &str,
 		G: []string{"a", "b"},
 		H: [1]string{"a"},
+		I: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+		J: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 	}
+
 	v, err := Values(s)
 	if err != nil {
 		t.Errorf("Values(%q) returned error: %v", s, err)
@@ -37,6 +43,8 @@ func TestValues_types(t *testing.T) {
 		"F": {"string"},
 		"G": {"a", "b"},
 		"H": {"a"},
+		"I": {"2000-01-01T12:34:56Z"},
+		"J": {"946730096"},
 	}
 	if !reflect.DeepEqual(want, v) {
 		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
@@ -53,6 +61,7 @@ func TestValues_omitEmpty(t *testing.T) {
 		D string  `url:"omitempty"` // actually named omitempty, not an option
 		E *string `url:",omitempty"`
 	}{E: &str}
+
 	v, err := Values(s)
 	if err != nil {
 		t.Errorf("Values(%q) returned error: %v", s, err)
