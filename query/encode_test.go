@@ -19,14 +19,18 @@ func TestValues_types(t *testing.T) {
 		F *string
 		G []string
 		H [1]string
-		I time.Time
-		J time.Time `url:",unix"`
+		I []string `url:",comma"`
+		J []string `url:",space"`
+		K time.Time
+		L time.Time `url:",unix"`
 	}{
 		F: &str,
 		G: []string{"a", "b"},
 		H: [1]string{"a"},
-		I: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
-		J: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+		I: []string{"a", "b"},
+		J: []string{"a", "b"},
+		K: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+		L: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 	}
 
 	v, err := Values(s)
@@ -43,8 +47,10 @@ func TestValues_types(t *testing.T) {
 		"F": {"string"},
 		"G": {"a", "b"},
 		"H": {"a"},
-		"I": {"2000-01-01T12:34:56Z"},
-		"J": {"946730096"},
+		"I": {"a,b"},
+		"J": {"a b"},
+		"K": {"2000-01-01T12:34:56Z"},
+		"L": {"946730096"},
 	}
 	if !reflect.DeepEqual(want, v) {
 		t.Errorf("Values(%q) returned %v, want %v", s, v, want)

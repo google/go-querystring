@@ -1,9 +1,11 @@
 package query
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"reflect"
+
 	"time"
 )
 
@@ -45,8 +47,29 @@ func Values(v interface{}) (url.Values, error) {
 
 		switch sv.Kind() {
 		case reflect.Slice, reflect.Array:
-			for i := 0; i < sv.Len(); i++ {
-				values.Add(name, fmt.Sprint(sv.Index(i)))
+			var del string
+			if opts.Contains("comma") {
+				del = ","
+			} else if opts.Contains("space") {
+				del = " "
+			}
+
+			if del != "" {
+				s := new(bytes.Buffer)
+				first := true
+				for i := 0; i < sv.Len(); i++ {
+					if first {
+						first = false
+					} else {
+						fmt.Fprint(s, del)
+					}
+					fmt.Fprint(s, sv.Index(i))
+				}
+				values.Add(name, s.String())
+			} else {
+				for i := 0; i < sv.Len(); i++ {
+					values.Add(name, fmt.Sprint(sv.Index(i)))
+				}
 			}
 		default:
 			switch sv.Type() {
