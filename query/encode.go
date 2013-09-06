@@ -1,3 +1,19 @@
+// Package query implements encoding of structs into URL query parameters.
+//
+// As a simple example:
+//
+// 	type Options struct {
+// 		Query   string `url:"q"`
+// 		ShowAll bool   `url:"all"`
+// 		Page    int    `url:"page"`
+// 	}
+//
+// 	opt := Options{ "foo", true, 2 }
+// 	v, _ := query.Values(opt)
+// 	fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
+//
+// The exact mapping between Go values and url.Values is described in the
+// documentation for the Values() function.
 package query
 
 import (
@@ -12,6 +28,56 @@ import (
 var timeType = reflect.TypeOf(time.Time{})
 
 // Values returns the url.Values encoding of v.
+//
+// Values expects to be passed a struct, and traverses it recursively using the
+// following encoding rules.
+//
+// The URL parameter name defaults to the struct field name but can be
+// specified in the struct field's tag value.  The "url" key in the struct
+// field's tag value is the key name, followed by an optional comma and
+// options.  For example:
+//
+// 	// Field is ignored by this package.
+// 	Field int `url:"-"`
+//
+// 	// Field appears as URL parameter "myName".
+// 	Field int `url:"myName"`
+//
+// 	// Field appears as URL parameter "myName" and the field is omitted if
+// 	// its value is empty
+// 	Field int `url:"myName,omitempty"`
+//
+// 	// Field appears as URL parameter "Field" (the default), but the field
+// 	// is skipped if empty.  Note the leading comma.
+// 	Field int `url:",omitempty"`
+//
+// For encoding individual field values, the following type-dependent rules
+// apply:
+//
+// Boolean values default to encoding as the strings "true" or "false".
+// Including the "int" option signals that the field should be encoded as the
+// strings "1" or "0".
+//
+// time.Time values default to encoding as RFC3339 timestamps.  Including the
+// "unix" option signals that the field should be encoded as a Unix time (see
+// time.Unix())
+//
+// Slice and Array values default to encoding as multiple URL values of the
+// same name.  Including the "comma" option signals that the field should be
+// encoded as a single comma-delimited value.  Including the "space" option
+// similarly encodes the value as a single space-delimited string.
+//
+// Anonymous struct fields are usually encoded as if their inner exported
+// fields were fields in the outer struct, subject to the standard Go
+// visibility rules.  An anonymous struct field with a name given in its URL
+// tag is treated as having that name, rather than being anonymous.
+//
+// Non-nil pointer values are encoded as the value pointed to.
+//
+// All other values are encoded using their default string representation.
+//
+// Multiple fields that encode to the same URL parameter name will be included
+// as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
 	values := &url.Values{}
 
