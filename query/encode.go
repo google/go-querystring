@@ -20,7 +20,8 @@ func Values(v interface{}) (url.Values, error) {
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
 
-		name := sf.Tag.Get("url")
+		tag := sf.Tag.Get("url")
+		name, _ := parseTag(tag)
 		if name == "" {
 			name = sf.Name
 		}

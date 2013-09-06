@@ -9,7 +9,7 @@ import (
 
 func TestValues(t *testing.T) {
 	s := struct {
-		A string `url:"a"`
+		A string `url:"a,omitempty"`
 		B int
 	}{"abc", 1}
 	v, err := Values(s)
