@@ -68,13 +68,19 @@ func TestValues_types(t *testing.T) {
 			struct {
 				A time.Time
 				B time.Time `url:",unix"`
+				C bool      `url:",int"`
+				D bool      `url:",int"`
 			}{
 				A: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 				B: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+				C: true,
+				D: false,
 			},
 			url.Values{
 				"A": {"2000-01-01T12:34:56Z"},
 				"B": {"946730096"},
+				"C": {"1"},
+				"D": {"0"},
 			},
 		},
 	}

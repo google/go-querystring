@@ -71,6 +71,19 @@ func Values(v interface{}) (url.Values, error) {
 					values.Add(name, fmt.Sprint(sv.Index(i)))
 				}
 			}
+		case reflect.Bool:
+			var value string
+			if opts.Contains("int") {
+				if sv.Bool() {
+					value = "1"
+				} else {
+					value = "0"
+				}
+			} else {
+				value = fmt.Sprint(sv.Interface())
+			}
+
+			values.Add(name, value)
 		default:
 			switch sv.Type() {
 			case timeType:
