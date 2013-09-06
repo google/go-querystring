@@ -21,6 +21,10 @@ func Values(v interface{}) (url.Values, error) {
 		sf := typ.Field(i)
 
 		tag := sf.Tag.Get("url")
+		if tag == "-" {
+			continue
+		}
+
 		name, _ := parseTag(tag)
 		if name == "" {
 			name = sf.Name
