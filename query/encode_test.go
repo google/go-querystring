@@ -16,7 +16,13 @@ func TestValues_types(t *testing.T) {
 		D float32
 		E bool
 		F *string
-	}{F: &str}
+		G []string
+		H [1]string
+	}{
+		F: &str,
+		G: []string{"a", "b"},
+		H: [1]string{"a"},
+	}
 	v, err := Values(s)
 	if err != nil {
 		t.Errorf("Values(%q) returned error: %v", s, err)
@@ -29,6 +35,8 @@ func TestValues_types(t *testing.T) {
 		"D": {"0"},
 		"E": {"false"},
 		"F": {"string"},
+		"G": {"a", "b"},
+		"H": {"a"},
 	}
 	if !reflect.DeepEqual(want, v) {
 		t.Errorf("Values(%q) returned %v, want %v", s, v, want)

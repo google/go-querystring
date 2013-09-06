@@ -40,7 +40,14 @@ func Values(v interface{}) (url.Values, error) {
 			sv = sv.Elem()
 		}
 
-		values.Add(name, fmt.Sprint(sv.Interface()))
+		switch sv.Kind() {
+		case reflect.Slice, reflect.Array:
+			for i := 0; i < sv.Len(); i++ {
+				values.Add(name, fmt.Sprint(sv.Index(i)))
+			}
+		default:
+			values.Add(name, fmt.Sprint(sv.Interface()))
+		}
 	}
 
 	return values, nil
