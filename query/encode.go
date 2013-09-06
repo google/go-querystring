@@ -36,6 +36,10 @@ func Values(v interface{}) (url.Values, error) {
 			continue
 		}
 
+		if !isEmptyValue(sv) && sv.Kind() == reflect.Ptr {
+			sv = sv.Elem()
+		}
+
 		values.Add(name, fmt.Sprint(sv.Interface()))
 	}
 
