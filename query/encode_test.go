@@ -123,6 +123,46 @@ func TestValues_omitEmpty(t *testing.T) {
 	}
 }
 
+type A struct {
+	B
+}
+
+type B struct {
+	C string
+}
+
+type D struct {
+	B
+	C string
+}
+
+func TestValues_embeddedStructs(t *testing.T) {
+	tests := []struct {
+		in   interface{}
+		want url.Values
+	}{
+		{
+			A{B{C: "foo"}},
+			url.Values{"C": {"foo"}},
+		},
+		{
+			D{B: B{C: "bar"}, C: "foo"},
+			url.Values{"C": {"foo", "bar"}},
+		},
+	}
+
+	for i, tt := range tests {
+		v, err := Values(tt.in)
+		if err != nil {
+			t.Errorf("%d. Values(%q) returned error: %v", i, tt.in, err)
+		}
+
+		if !reflect.DeepEqual(tt.want, v) {
+			t.Errorf("%d. Values(%q) returned %v, want %v", i, tt.in, v, tt.want)
+		}
+	}
+}
+
 func TestValues_invalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {

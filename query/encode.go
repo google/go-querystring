@@ -13,12 +13,20 @@ var timeType = reflect.TypeOf(time.Time{})
 
 // Values returns the url.Values encoding of v.
 func Values(v interface{}) (url.Values, error) {
-	values := url.Values{}
+	values := &url.Values{}
 
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("query: Values() expects struct input")
 	}
+
+	reflectValue(values, val)
+
+	return *values, nil
+}
+
+func reflectValue(values *url.Values, val reflect.Value) {
+	embedded := []reflect.Value{}
 
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -27,16 +35,22 @@ func Values(v interface{}) (url.Values, error) {
 			continue
 		}
 
+		sv := val.Field(i)
 		tag := sf.Tag.Get("url")
 		if tag == "-" {
 			continue
 		}
 		name, opts := parseTag(tag)
 		if name == "" {
+			if sf.Anonymous && sv.Kind() == reflect.Struct {
+				// save embedded struct for later processing
+				embedded = append(embedded, sv)
+				continue
+			}
+
 			name = sf.Name
 		}
 
-		sv := val.Field(i)
 		if opts.Contains("omitempty") && isEmptyValue(sv) {
 			continue
 		}
@@ -99,7 +113,9 @@ func Values(v interface{}) (url.Values, error) {
 		}
 	}
 
-	return values, nil
+	for _, f := range embedded {
+		reflectValue(values, f)
+	}
 }
 
 func isEmptyValue(v reflect.Value) bool {
