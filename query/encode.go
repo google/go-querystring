@@ -19,9 +19,14 @@ func Values(v interface{}) (url.Values, error) {
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
-		sv := val.Field(i)
 
-		values.Add(sf.Name, fmt.Sprint(sv.Interface()))
+		name := sf.Tag.Get("url")
+		if name == "" {
+			name = sf.Name
+		}
+
+		sv := val.Field(i)
+		values.Add(name, fmt.Sprint(sv.Interface()))
 	}
 
 	return values, nil

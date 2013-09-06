@@ -9,7 +9,7 @@ import (
 
 func TestValues(t *testing.T) {
 	s := struct {
-		A string
+		A string `url:"a"`
 		B int
 	}{"abc", 1}
 	v, err := Values(s)
@@ -18,7 +18,7 @@ func TestValues(t *testing.T) {
 	}
 
 	want := url.Values{
-		"A": {"abc"},
+		"a": {"abc"},
 		"B": {"1"},
 	}
 	if !reflect.DeepEqual(want, v) {
