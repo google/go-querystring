@@ -7,9 +7,8 @@ package query
 import (
 	"net/url"
 	"reflect"
-	"time"
-
 	"testing"
+	"time"
 )
 
 func TestValues_types(t *testing.T) {
