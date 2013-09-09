@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 
 	"time"
 )
@@ -130,67 +131,71 @@ func reflectValue(values *url.Values, val reflect.Value) {
 			continue
 		}
 
-		if !isEmptyValue(sv) && sv.Kind() == reflect.Ptr {
-			sv = sv.Elem()
-		}
-
 		switch sv.Kind() {
 		case reflect.Slice, reflect.Array:
-			var del string
+			var del byte
 			if opts.Contains("comma") {
-				del = ","
+				del = ','
 			} else if opts.Contains("space") {
-				del = " "
+				del = ' '
 			}
 
-			if del != "" {
+			if del != 0 {
 				s := new(bytes.Buffer)
 				first := true
 				for i := 0; i < sv.Len(); i++ {
 					if first {
 						first = false
 					} else {
-						fmt.Fprint(s, del)
+						s.WriteByte(del)
 					}
-					fmt.Fprint(s, sv.Index(i))
+					s.WriteString(valueString(sv.Index(i), opts))
 				}
 				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
-					values.Add(name, fmt.Sprint(sv.Index(i)))
+					values.Add(name, valueString(sv.Index(i), opts))
 				}
 			}
-		case reflect.Bool:
-			var value string
-			if opts.Contains("int") {
-				if sv.Bool() {
-					value = "1"
-				} else {
-					value = "0"
-				}
-			} else {
-				value = fmt.Sprint(sv.Interface())
-			}
-
-			values.Add(name, value)
 		default:
-			switch sv.Type() {
-			case timeType:
-				t := sv.Interface().(time.Time)
-				if opts.Contains("unix") {
-					values.Add(name, fmt.Sprint(t.Unix()))
-				} else {
-					values.Add(name, t.Format(time.RFC3339))
-				}
-			default:
-				values.Add(name, fmt.Sprint(sv.Interface()))
-			}
+			values.Add(name, valueString(sv, opts))
 		}
 	}
 
 	for _, f := range embedded {
 		reflectValue(values, f)
 	}
+}
+
+// valueString returns the string representation of a value.
+func valueString(v reflect.Value, opts tagOptions) string {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return ""
+		}
+		v = reflect.Indirect(v)
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		if opts.Contains("int") {
+			if v.Bool() {
+				return "1"
+			}
+			return "0"
+		}
+	}
+
+	switch v.Type() {
+	case timeType:
+		t := v.Interface().(time.Time)
+		if opts.Contains("unix") {
+			return strconv.FormatInt(t.Unix(), 10)
+		}
+		return t.Format(time.RFC3339)
+	}
+
+	return fmt.Sprint(v.Interface())
 }
 
 func isEmptyValue(v reflect.Value) bool {

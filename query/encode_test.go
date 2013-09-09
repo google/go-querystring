@@ -38,8 +38,14 @@ func TestValues_types(t *testing.T) {
 		},
 		{
 			// pointers
-			struct{ A *string }{A: &str},
-			url.Values{"A": {str}},
+			struct {
+				A *string
+				B *int
+			}{A: &str},
+			url.Values{
+				"A": {str},
+				"B": {""},
+			},
 		},
 		{
 			// slices and arrays
@@ -50,6 +56,8 @@ func TestValues_types(t *testing.T) {
 				D [2]string
 				E [2]string `url:",comma"`
 				F [2]string `url:",space"`
+				G []*string `url:",space"`
+				H []bool    `url:",int,space"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},
@@ -57,6 +65,8 @@ func TestValues_types(t *testing.T) {
 				D: [2]string{"a", "b"},
 				E: [2]string{"a", "b"},
 				F: [2]string{"a", "b"},
+				G: []*string{&str, &str},
+				H: []bool{true, false},
 			},
 			url.Values{
 				"A": {"a", "b"},
@@ -65,6 +75,8 @@ func TestValues_types(t *testing.T) {
 				"D": {"a", "b"},
 				"E": {"a,b"},
 				"F": {"a b"},
+				"G": {"string string"},
+				"H": {"1 0"},
 			},
 		},
 		{
