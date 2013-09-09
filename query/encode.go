@@ -82,8 +82,13 @@ func Values(v interface{}) (url.Values, error) {
 	values := &url.Values{}
 
 	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr && val.IsNil() {
+		return *values, nil
+	}
+
+	val = reflect.Indirect(val)
 	if val.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("query: Values() expects struct input")
+		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
 	reflectValue(values, val)
