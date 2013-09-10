@@ -94,8 +94,6 @@ var timeType = reflect.TypeOf(time.Time{})
 // Multiple fields that encode to the same URL parameter name will be included
 // as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
-	values := &url.Values{}
-
 	val := reflect.ValueOf(v)
 	for val.Kind() == reflect.Ptr {
 		if val.IsNil() {
@@ -108,13 +106,16 @@ func Values(v interface{}) (url.Values, error) {
 		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
+	values := make(url.Values)
 	reflectValue(values, val)
-
-	return *values, nil
+	return values, nil
 }
 
-func reflectValue(values *url.Values, val reflect.Value) {
-	embedded := []reflect.Value{}
+// reflectValue populates the values parameter from the struct fields in val.
+// Embedded structs are followed recursively (using the rules defined in the
+// Values function documentation) breadth-first.
+func reflectValue(values url.Values, val reflect.Value) {
+	var embedded []reflect.Value
 
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -143,8 +144,7 @@ func reflectValue(values *url.Values, val reflect.Value) {
 			continue
 		}
 
-		switch sv.Kind() {
-		case reflect.Slice, reflect.Array:
+		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
 			var del byte
 			if opts.Contains("comma") {
 				del = ','
@@ -169,9 +169,10 @@ func reflectValue(values *url.Values, val reflect.Value) {
 					values.Add(name, valueString(sv.Index(i), opts))
 				}
 			}
-		default:
-			values.Add(name, valueString(sv, opts))
+			continue
 		}
+
+		values.Add(name, valueString(sv, opts))
 	}
 
 	for _, f := range embedded {
@@ -188,18 +189,14 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		v = v.Elem()
 	}
 
-	switch v.Kind() {
-	case reflect.Bool:
-		if opts.Contains("int") {
-			if v.Bool() {
-				return "1"
-			}
-			return "0"
+	if v.Kind() == reflect.Bool && opts.Contains("int") {
+		if v.Bool() {
+			return "1"
 		}
+		return "0"
 	}
 
-	switch v.Type() {
-	case timeType:
+	if v.Type() == timeType {
 		t := v.Interface().(time.Time)
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
@@ -228,8 +225,7 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.IsNil()
 	}
 
-	switch v.Type() {
-	case timeType:
+	if v.Type() == timeType {
 		return v.Interface().(time.Time).IsZero()
 	}
 
