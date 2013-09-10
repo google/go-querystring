@@ -21,6 +21,7 @@
 package query
 
 import (
+	"strings"
 	"bytes"
 	"fmt"
 	"net/url"
@@ -220,5 +221,26 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Interface().(time.Time).IsZero()
 	}
 
+	return false
+}
+
+// tagOptions is the string following a comma in a struct field's "url" tag, or
+// the empty string. It does not include the leading comma.
+type tagOptions []string
+
+// parseTag splits a struct field's url tag into its name and comma-separated
+// options.
+func parseTag(tag string) (string, tagOptions) {
+	s := strings.Split(tag, ",")
+	return s[0], s[1:]
+}
+
+// Contains checks whether the tagOptions contains the specified option.
+func (o tagOptions) Contains(option string) bool {
+	for _, s := range o {
+		if s == option {
+			return true
+		}
+	}
 	return false
 }
