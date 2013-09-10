@@ -21,12 +21,13 @@
 package query
 
 import (
-	"strings"
 	"bytes"
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,6 +37,15 @@ var timeType = reflect.TypeOf(time.Time{})
 //
 // Values expects to be passed a struct, and traverses it recursively using the
 // following encoding rules.
+//
+// Each exported struct field is encoded as a URL parameter unless
+//
+//	- the field's tag is "-", or
+//	- the field is empty and its tag specifies the "omitempty" option
+//
+// The empty values are false, 0, any nil pointer or interface value, any array
+// slice, map, or string of length zero, and any time.Time that returns true
+// for IsZero().
 //
 // The URL parameter name defaults to the struct field name but can be
 // specified in the struct field's tag value.  The "url" key in the struct
@@ -87,11 +97,11 @@ func Values(v interface{}) (url.Values, error) {
 	values := &url.Values{}
 
 	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Ptr {
+	for val.Kind() == reflect.Ptr {
 		if val.IsNil() {
-			return *values, nil
+			return nil, errors.New("query: Values() expects non-nil value")
 		}
-		val = reflect.Indirect(val)
+		val = val.Elem()
 	}
 
 	if val.Kind() != reflect.Struct {
@@ -171,11 +181,11 @@ func reflectValue(values *url.Values, val reflect.Value) {
 
 // valueString returns the string representation of a value.
 func valueString(v reflect.Value, opts tagOptions) string {
-	if v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return ""
 		}
-		v = reflect.Indirect(v)
+		v = v.Elem()
 	}
 
 	switch v.Kind() {
@@ -200,6 +210,8 @@ func valueString(v reflect.Value, opts tagOptions) string {
 	return fmt.Sprint(v.Interface())
 }
 
+// isEmptyValue checks if a value should be considered empty for the purposes
+// of omitting fields with the "omitempty" option.
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:

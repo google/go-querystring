@@ -13,6 +13,7 @@ import (
 
 func TestValues_types(t *testing.T) {
 	str := "string"
+	strPtr := &str
 
 	tests := []struct {
 		in   interface{}
@@ -40,10 +41,12 @@ func TestValues_types(t *testing.T) {
 			struct {
 				A *string
 				B *int
-			}{A: &str},
+				C **string
+			}{A: strPtr, C: &strPtr},
 			url.Values{
 				"A": {str},
 				"B": {""},
+				"C": {str},
 			},
 		},
 		{
