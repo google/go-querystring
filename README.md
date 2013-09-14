@@ -17,7 +17,7 @@ URL using a struct that represents the URL query parameters.  You might do this
 to enforce the type safety of your parameters, for example, as is done in the
 [go-github][] library.
 
-The query package exports a single `Value()` function.  A simple example:
+The query package exports a single `Values()` function.  A simple example:
 
 ```go
 type Options struct {
