@@ -33,6 +33,14 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
+var encoderType = reflect.TypeOf(new(Encoder)).Elem()
+
+// Encoder is an interface implemented by any type that wishes to encode
+// itself into URL values in a non-standard way.
+type Encoder interface {
+	EncodeValues(v *url.Values) error
+}
+
 // Values returns the url.Values encoding of v.
 //
 // Values expects to be passed a struct, and traverses it recursively using the
@@ -107,14 +115,14 @@ func Values(v interface{}) (url.Values, error) {
 	}
 
 	values := make(url.Values)
-	reflectValue(values, val)
-	return values, nil
+	err := reflectValue(values, val)
+	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value) {
+func reflectValue(values url.Values, val reflect.Value) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -141,6 +149,14 @@ func reflectValue(values url.Values, val reflect.Value) {
 		}
 
 		if opts.Contains("omitempty") && isEmptyValue(sv) {
+			continue
+		}
+
+		if sv.Type().Implements(encoderType) {
+			m := sv.Interface().(Encoder)
+			if err := m.EncodeValues(&values); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -176,8 +192,12 @@ func reflectValue(values url.Values, val reflect.Value) {
 	}
 
 	for _, f := range embedded {
-		reflectValue(values, f)
+		if err := reflectValue(values, f); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // valueString returns the string representation of a value.

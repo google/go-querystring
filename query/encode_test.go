@@ -5,6 +5,7 @@
 package query
 
 import (
+	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
@@ -185,6 +186,34 @@ func TestValues_invalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
 		t.Errorf("expected Values() to return an error on invalid input")
+	}
+}
+
+type EncodedArgs []string
+
+func (m EncodedArgs) EncodeValues(v *url.Values) error {
+	for i, arg := range m {
+		v.Set(fmt.Sprintf("arg.%d", i), arg)
+	}
+	return nil
+}
+
+func TestValues_Marshaler(t *testing.T) {
+	s := struct {
+		Args EncodedArgs `url:"args"`
+	}{[]string{"a", "b", "c"}}
+	v, err := Values(s)
+	if err != nil {
+		t.Errorf("Values(%q) returned error: %v", s, err)
+	}
+
+	want := url.Values{
+		"arg.0": {"a"},
+		"arg.1": {"b"},
+		"arg.2": {"c"},
+	}
+	if !reflect.DeepEqual(want, v) {
+		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
 	}
 }
 
