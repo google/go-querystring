@@ -38,7 +38,7 @@ var encoderType = reflect.TypeOf(new(Encoder)).Elem()
 // Encoder is an interface implemented by any type that wishes to encode
 // itself into URL values in a non-standard way.
 type Encoder interface {
-	EncodeValues(v *url.Values) error
+	EncodeValues(key string, v *url.Values) error
 }
 
 // Values returns the url.Values encoding of v.
@@ -154,7 +154,7 @@ func reflectValue(values url.Values, val reflect.Value) error {
 
 		if sv.Type().Implements(encoderType) {
 			m := sv.Interface().(Encoder)
-			if err := m.EncodeValues(&values); err != nil {
+			if err := m.EncodeValues(name, &values); err != nil {
 				return err
 			}
 			continue

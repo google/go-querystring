@@ -191,16 +191,16 @@ func TestValues_invalidInput(t *testing.T) {
 
 type EncodedArgs []string
 
-func (m EncodedArgs) EncodeValues(v *url.Values) error {
+func (m EncodedArgs) EncodeValues(key string, v *url.Values) error {
 	for i, arg := range m {
-		v.Set(fmt.Sprintf("arg.%d", i), arg)
+		v.Set(fmt.Sprintf("%s.%d", key, i), arg)
 	}
 	return nil
 }
 
 func TestValues_Marshaler(t *testing.T) {
 	s := struct {
-		Args EncodedArgs `url:"args"`
+		Args EncodedArgs `url:"arg"`
 	}{[]string{"a", "b", "c"}}
 	v, err := Values(s)
 	if err != nil {
