@@ -115,14 +115,14 @@ func Values(v interface{}) (url.Values, error) {
 	}
 
 	values := make(url.Values)
-	err := reflectValue(values, val)
+	err := reflectValue(values, val, "")
 	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value) error {
+func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -148,6 +148,10 @@ func reflectValue(values url.Values, val reflect.Value) error {
 			name = sf.Name
 		}
 
+		if scope != "" {
+			name = scope + "[" + name + "]"
+		}
+
 		if opts.Contains("omitempty") && isEmptyValue(sv) {
 			continue
 		}
@@ -166,6 +170,8 @@ func reflectValue(values url.Values, val reflect.Value) error {
 				del = ','
 			} else if opts.Contains("space") {
 				del = ' '
+			} else if opts.Contains("key") {
+				name = name + "[]"
 			}
 
 			if del != 0 {
@@ -188,11 +194,28 @@ func reflectValue(values url.Values, val reflect.Value) error {
 			continue
 		}
 
+		if sv.Type() == timeType {
+			values.Add(name, valueString(sv, opts))
+			continue
+		}
+
+		for sv.Kind() == reflect.Ptr {
+			if sv.IsNil() {
+				break
+			}
+			sv = sv.Elem()
+		}
+
+		if sv.Kind() == reflect.Struct {
+			reflectValue(values, sv, name)
+			continue
+		}
+
 		values.Add(name, valueString(sv, opts))
 	}
 
 	for _, f := range embedded {
-		if err := reflectValue(values, f); err != nil {
+		if err := reflectValue(values, f, scope); err != nil {
 			return err
 		}
 	}
