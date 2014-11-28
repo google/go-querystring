@@ -22,7 +22,6 @@ package query
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -102,19 +101,23 @@ type Encoder interface {
 // Multiple fields that encode to the same URL parameter name will be included
 // as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
+	values := make(url.Values)
 	val := reflect.ValueOf(v)
 	for val.Kind() == reflect.Ptr {
 		if val.IsNil() {
-			return nil, errors.New("query: Values() expects non-nil value")
+			return values, nil
 		}
 		val = val.Elem()
+	}
+
+	if v == nil {
+		return values, nil
 	}
 
 	if val.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
-	values := make(url.Values)
 	err := reflectValue(values, val, "")
 	return values, err
 }

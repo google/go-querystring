@@ -146,6 +146,10 @@ func TestValues_types(t *testing.T) {
 				"nest[ptr][value]": {"that"},
 			},
 		},
+		{
+			nil,
+			url.Values{},
+		},
 	}
 
 	for i, tt := range tests {
