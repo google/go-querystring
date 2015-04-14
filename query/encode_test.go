@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+type Nested struct {
+	A   SubNested  `url:"a"`
+	B   *SubNested `url:"b"`
+	Ptr *SubNested `url:"ptr,omitempty"`
+}
+
+type SubNested struct {
+	Value string `url:"value"`
+}
+
 func TestValues_types(t *testing.T) {
 	str := "string"
 	strPtr := &str
@@ -61,6 +71,7 @@ func TestValues_types(t *testing.T) {
 				F [2]string `url:",space"`
 				G []*string `url:",space"`
 				H []bool    `url:",int,space"`
+				I []string  `url:",brackets"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},
@@ -70,16 +81,18 @@ func TestValues_types(t *testing.T) {
 				F: [2]string{"a", "b"},
 				G: []*string{&str, &str},
 				H: []bool{true, false},
+				I: []string{"a", "b"},
 			},
 			url.Values{
-				"A": {"a", "b"},
-				"B": {"a,b"},
-				"C": {"a b"},
-				"D": {"a", "b"},
-				"E": {"a,b"},
-				"F": {"a b"},
-				"G": {"string string"},
-				"H": {"1 0"},
+				"A":   {"a", "b"},
+				"B":   {"a,b"},
+				"C":   {"a b"},
+				"D":   {"a", "b"},
+				"E":   {"a,b"},
+				"F":   {"a b"},
+				"G":   {"string string"},
+				"H":   {"1 0"},
+				"I[]": {"a", "b"},
 			},
 		},
 		{
@@ -101,6 +114,41 @@ func TestValues_types(t *testing.T) {
 				"C": {"1"},
 				"D": {"0"},
 			},
+		},
+		{
+			struct {
+				Nest Nested `url:"nest"`
+			}{
+				Nested{
+					A: SubNested{
+						Value: "that",
+					},
+				},
+			},
+			url.Values{
+				"nest[a][value]": {"that"},
+				"nest[b]":        {""},
+			},
+		},
+		{
+			struct {
+				Nest Nested `url:"nest"`
+			}{
+				Nested{
+					Ptr: &SubNested{
+						Value: "that",
+					},
+				},
+			},
+			url.Values{
+				"nest[a][value]":   {""},
+				"nest[b]":          {""},
+				"nest[ptr][value]": {"that"},
+			},
+		},
+		{
+			nil,
+			url.Values{},
 		},
 	}
 
