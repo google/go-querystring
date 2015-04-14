@@ -87,7 +87,9 @@ type Encoder interface {
 // Slice and Array values default to encoding as multiple URL values of the
 // same name.  Including the "comma" option signals that the field should be
 // encoded as a single comma-delimited value.  Including the "space" option
-// similarly encodes the value as a single space-delimited string.
+// similarly encodes the value as a single space-delimited string. Including
+// the "key" signals that the multiple URL values should have "[]" appended to
+// the value name.
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -95,6 +97,11 @@ type Encoder interface {
 // tag is treated as having that name, rather than being anonymous.
 //
 // Non-nil pointer values are encoded as the value pointed to.
+//
+// Nested structs are encoded including parent fields in value names for
+// scoping. e.g:
+//
+// 	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
 //
 // All other values are encoded using their default string representation.
 //
