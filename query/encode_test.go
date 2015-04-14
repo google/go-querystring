@@ -71,7 +71,7 @@ func TestValues_types(t *testing.T) {
 				F [2]string `url:",space"`
 				G []*string `url:",space"`
 				H []bool    `url:",int,space"`
-				I []string  `url:",key"`
+				I []string  `url:",brackets"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},

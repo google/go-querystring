@@ -88,8 +88,8 @@ type Encoder interface {
 // same name.  Including the "comma" option signals that the field should be
 // encoded as a single comma-delimited value.  Including the "space" option
 // similarly encodes the value as a single space-delimited string. Including
-// the "key" signals that the multiple URL values should have "[]" appended to
-// the value name.
+// the "brackets" signals that the multiple URL values should have "[]"
+// appended to the value name.
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -180,7 +180,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				del = ','
 			} else if opts.Contains("space") {
 				del = ' '
-			} else if opts.Contains("key") {
+			} else if opts.Contains("brackets") {
 				name = name + "[]"
 			}
 
