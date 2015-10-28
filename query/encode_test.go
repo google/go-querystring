@@ -265,6 +265,21 @@ func TestValues_Marshaler(t *testing.T) {
 	}
 }
 
+func TestValues_MarshalerWithNilPointer(t *testing.T) {
+	s := struct {
+		Args *EncodedArgs `url:"arg"`
+	}{}
+	v, err := Values(s)
+	if err != nil {
+		t.Errorf("Values(%q) returned error: %v", s, err)
+	}
+
+	want := url.Values{}
+	if !reflect.DeepEqual(want, v) {
+		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+	}
+}
+
 func TestTagParsing(t *testing.T) {
 	name, opts := parseTag("field,foobar,foo")
 	if name != "field" {
