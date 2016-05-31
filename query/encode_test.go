@@ -300,8 +300,30 @@ func TestValues_MarshalerWithNilPointer(t *testing.T) {
 	}
 }
 
+func TestValuesWithOpts_NoOverride(t *testing.T) {
+	s := struct {
+		A []int
+		B []int `url:"b,brackets"`
+	}{
+		A: []int{1, 2, 3},
+		B: []int{4, 5, 6},
+	}
+	v, err := ValuesWithOpts(s, []string{"comma"})
+	if err != nil {
+		t.Errorf("Values(%q) returned error: %v", s, err)
+	}
+
+	want := url.Values{
+		"A":   {"1,2,3"},
+		"b[]": {"4", "5", "6"},
+	}
+	if !reflect.DeepEqual(want, v) {
+		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+	}
+}
+
 func TestTagParsing(t *testing.T) {
-	name, opts := parseTag("field,foobar,foo")
+	name, opts := parseTag("field,foobar,foo", nil)
 	if name != "field" {
 		t.Fatalf("name = %q, want field", name)
 	}

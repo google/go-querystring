@@ -31,6 +31,10 @@ import (
 )
 
 var (
+	// DefaultOpts is used when a field has no options set. Setting this is
+	// the global equivalent of ValuesWithOpts(..., DefaultOpts).
+	DefaultOpts []string
+
 	timeType    = reflect.TypeOf(time.Time{})
 	encoderType = reflect.TypeOf(new(Encoder)).Elem()
 )
@@ -112,6 +116,12 @@ type Encoder interface {
 // Multiple fields that encode to the same URL parameter name will be included
 // as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
+	return ValuesWithOpts(v, DefaultOpts)
+}
+
+// ValuesWithOpts works just like Values, except it accepts a slice of default
+// options to use on all fields when the field has no options set.
+func ValuesWithOpts(v interface{}, defaultOpts []string) (url.Values, error) {
 	values := make(url.Values)
 	val := reflect.ValueOf(v)
 	for val.Kind() == reflect.Ptr {
@@ -129,14 +139,14 @@ func Values(v interface{}) (url.Values, error) {
 		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
-	err := reflectValue(values, val, "")
+	err := reflectValue(values, val, "", defaultOpts)
 	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value, scope string) error {
+func reflectValue(values url.Values, val reflect.Value, scope string, defOpts []string) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -151,7 +161,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		if tag == "-" {
 			continue
 		}
-		name, opts := parseTag(tag)
+		name, opts := parseTag(tag, defOpts)
 		if name == "" {
 			if sf.Anonymous && sv.Kind() == reflect.Struct {
 				// save embedded struct for later processing
@@ -231,7 +241,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			reflectValue(values, sv, name)
+			reflectValue(values, sv, name, defOpts)
 			continue
 		}
 
@@ -239,7 +249,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	}
 
 	for _, f := range embedded {
-		if err := reflectValue(values, f, scope); err != nil {
+		if err := reflectValue(values, f, scope, defOpts); err != nil {
 			return err
 		}
 	}
@@ -305,8 +315,13 @@ type tagOptions []string
 
 // parseTag splits a struct field's url tag into its name and comma-separated
 // options.
-func parseTag(tag string) (string, tagOptions) {
+func parseTag(tag string, defOpts []string) (string, tagOptions) {
 	s := strings.Split(tag, ",")
+
+	if len(s) == 1 {
+		s = append(s, defOpts...)
+	}
+
 	return s[0], s[1:]
 }
 
