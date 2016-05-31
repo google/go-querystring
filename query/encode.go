@@ -30,9 +30,10 @@ import (
 	"time"
 )
 
-var timeType = reflect.TypeOf(time.Time{})
-
-var encoderType = reflect.TypeOf(new(Encoder)).Elem()
+var (
+	timeType    = reflect.TypeOf(time.Time{})
+	encoderType = reflect.TypeOf(new(Encoder)).Elem()
+)
 
 // Encoder is an interface implemented by any type that wishes to encode
 // itself into URL values in a non-standard way.
