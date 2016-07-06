@@ -171,6 +171,42 @@ func TestValues_types(t *testing.T) {
 	}
 }
 
+func TestEnc(t *testing.T){
+	var tests = []struct{
+		in interface{}
+		want url.Values
+	}{
+		{
+			in:	struct{
+				C []string `xyz:"a"`
+			}{
+				C: []string{"a", "b"},
+			},
+			want:	url.Values{"a":   {"a", "b"},},
+		},
+		{
+			in:	struct{
+				C []string 
+			}{
+				C: []string{"a", "b"},
+			},
+			want:	url.Values{"C":   {"a", "b"},},
+		},
+
+	}
+	for i, tt := range tests {
+		en := NewEncoder().SetAliasTag("xyz")
+		v, err := en.Values(tt.in)
+		if err != nil {
+			t.Errorf("%d. Values(%q) returned error: %v", i, tt.in, err)
+		}
+
+		if !reflect.DeepEqual(tt.want, v) {
+			t.Errorf("%d. Enc(%q) returned %v, want %v", i, tt.in, v, tt.want)
+		}
+	}	
+}
+
 func TestValues_omitEmpty(t *testing.T) {
 	str := ""
 	s := struct {
