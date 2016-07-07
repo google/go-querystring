@@ -82,7 +82,8 @@ type Encoder interface {
 //
 // time.Time values default to encoding as RFC3339 timestamps.  Including the
 // "unix" option signals that the field should be encoded as a Unix time (see
-// time.Unix())
+// time.Unix()). Including "layout" option and following layout string after
+// comma formats date using this layout.
 //
 // Slice and Array values default to encoding as multiple URL values of the
 // same name.  Including the "comma" option signals that the field should be
@@ -218,6 +219,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Type() == timeType {
+			if opts.Contains("layout"){
+				if len(opts)<=opts.pos("layout")+1{
+					return fmt.Errorf("Date time format layout should follow 'layout' option")
+				}
+			}
 			values.Add(name, valueString(sv, opts))
 			continue
 		}
@@ -266,6 +272,10 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		t := v.Interface().(time.Time)
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
+		}
+		fmt.Printf("opts %+v", opts)
+		if opts.Contains("layout"){
+			return t.Format(opts[opts.pos("layout")+1])
 		}
 		return t.Format(time.RFC3339)
 	}
@@ -317,4 +327,14 @@ func (o tagOptions) Contains(option string) bool {
 		}
 	}
 	return false
+}
+
+// pos returns option index in tagOptions slice.
+func (o tagOptions)pos(option string) int{
+    for p, v := range o {
+        if (v == option) {
+            return p
+        }
+    }
+    return -1
 }
