@@ -109,17 +109,23 @@ func TestValues_types(t *testing.T) {
 				B time.Time `url:",unix"`
 				C bool      `url:",int"`
 				D bool      `url:",int"`
+				E time.Time `url:",layout,2006-01-02"`
+				F time.Time `url:",layout,ffff"`
 			}{
 				A: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 				B: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 				C: true,
 				D: false,
+				E: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
+				F: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 			},
 			url.Values{
 				"A": {"2000-01-01T12:34:56Z"},
 				"B": {"946730096"},
 				"C": {"1"},
 				"D": {"0"},
+				"E": {"2000-01-01"},
+				"F": {"ffff"},
 			},
 		},
 		{
@@ -254,6 +260,23 @@ func TestValues_invalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
 		t.Errorf("expected Values() to return an error on invalid input")
+	}
+}
+
+func TestValues_invalidTagFormat(t *testing.T) {
+	tests:=[]interface{}{
+		struct{
+			Date time.Time `url:",layout"`
+		}{
+			Date:time.Now(),
+		},
+	}
+
+	for _,test:=range tests{
+		_,err:=Values(test)
+		if err == nil {
+			t.Errorf("expected Values() to return an error on invalid input")
+		}
 	}
 }
 
