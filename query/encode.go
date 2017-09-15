@@ -217,6 +217,16 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
+		if sv.Kind() == reflect.Map {
+			// continue
+			// fmt.Println(name, sv.Len(), sv.Interface().(map[string]string)["aaa"])
+			for k, v := range sv.Interface().(map[string]string) {
+				values.Add(fmt.Sprintf("%s[%s]", name, k), v)
+			}
+			// values.Add()
+			continue
+		}
+
 		for sv.Kind() == reflect.Ptr {
 			if sv.IsNil() {
 				break
