@@ -39,6 +39,7 @@ func TestValues_types(t *testing.T) {
 				C uint
 				D float32
 				E bool
+				F float64
 			}{},
 			url.Values{
 				"A": {""},
@@ -46,6 +47,7 @@ func TestValues_types(t *testing.T) {
 				"C": {"0"},
 				"D": {"0"},
 				"E": {"false"},
+				"F": {"0"},
 			},
 		},
 		{
@@ -116,17 +118,23 @@ func TestValues_types(t *testing.T) {
 				B time.Time `url:",unix"`
 				C bool      `url:",int"`
 				D bool      `url:",int"`
+				E float32   `url:",noexponent"`
+				F float64   `url:",noexponent"`
 			}{
 				A: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 				B: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
 				C: true,
 				D: false,
+				E: 1.23450,
+				F: 1.234567890,
 			},
 			url.Values{
 				"A": {"2000-01-01T12:34:56Z"},
 				"B": {"946730096"},
 				"C": {"1"},
 				"D": {"0"},
+				"E": {"1.2345"},
+				"F": {"1.23456789"},
 			},
 		},
 		{

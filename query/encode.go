@@ -255,22 +255,25 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		v = v.Elem()
 	}
 
-	if v.Kind() == reflect.Bool && opts.Contains("int") {
+	switch {
+	case v.Kind() == reflect.Bool && opts.Contains("int"):
 		if v.Bool() {
 			return "1"
 		}
 		return "0"
-	}
-
-	if v.Type() == timeType {
+	case v.Kind() == reflect.Float32 && opts.Contains("noexponent"):
+		return strconv.FormatFloat(v.Float(), 'f', -1, 32)
+	case v.Kind() == reflect.Float64 && opts.Contains("noexponent"):
+		return strconv.FormatFloat(v.Float(), 'f', -1, 64)
+	case v.Type() == timeType:
 		t := v.Interface().(time.Time)
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
 		return t.Format(time.RFC3339)
+	default:
+		return fmt.Sprint(v.Interface())
 	}
-
-	return fmt.Sprint(v.Interface())
 }
 
 // isEmptyValue checks if a value should be considered empty for the purposes
