@@ -1,10 +1,8 @@
 # go-querystring #
 
+[![GoDoc](https://godoc.org/github.com/google/go-querystring/query?status.svg)](https://godoc.org/github.com/google/go-querystring/query) [![Build Status](https://travis-ci.org/google/go-querystring.svg?branch=master)](https://travis-ci.org/google/go-querystring)
+
 go-querystring is Go library for encoding structs into URL query parameters.
-
-
-**Documentation:** <http://godoc.org/github.com/google/go-querystring/query>  
-**Build Status:** [![Build Status](https://drone.io/github.com/google/go-querystring/status.png)](https://drone.io/github.com/google/go-querystring/latest)  
 
 ## Usage ##
 
