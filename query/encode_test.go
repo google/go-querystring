@@ -26,6 +26,7 @@ func TestValues_types(t *testing.T) {
 	str := "string"
 	strPtr := &str
 	timeVal := time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)
+	var nilPtr *struct{}
 
 	tests := []struct {
 		in   interface{}
@@ -164,6 +165,14 @@ func TestValues_types(t *testing.T) {
 			nil,
 			url.Values{},
 		},
+		{
+			nilPtr,
+			url.Values{},
+		},
+		{
+			&struct{}{},
+			url.Values{},
+		},
 	}
 
 	for i, tt := range tests {
@@ -183,10 +192,16 @@ func TestValues_omitEmpty(t *testing.T) {
 	s := struct {
 		a string
 		A string
-		B string  `url:",omitempty"`
-		C string  `url:"-"`
-		D string  `url:"omitempty"` // actually named omitempty, not an option
-		E *string `url:",omitempty"`
+		B string    `url:",omitempty"`
+		C string    `url:"-"`
+		D string    `url:"omitempty"` // actually named omitempty, not an option
+		E *string   `url:",omitempty"`
+		F bool      `url:",omitempty"`
+		G int       `url:",omitempty"`
+		H uint      `url:",omitempty"`
+		I float32   `url:",omitempty"`
+		J time.Time `url:",omitempty"`
+		K struct{}  `url:",omitempty"`
 	}{E: &str}
 
 	v, err := Values(s)
