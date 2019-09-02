@@ -199,7 +199,7 @@ func TestValues_omitEmpty(t *testing.T) {
 
 	v, err := Values(s)
 	if err != nil {
-		t.Errorf("Values(%q) returned error: %v", s, err)
+		t.Errorf("Values(%v) returned error: %v", s, err)
 	}
 
 	want := url.Values{
@@ -208,7 +208,7 @@ func TestValues_omitEmpty(t *testing.T) {
 		"E":         {""}, // E is included because the pointer is not empty, even though the string being pointed to is
 	}
 	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+		t.Errorf("Values(%v) returned %v, want %v", s, v, want)
 	}
 }
 
@@ -306,12 +306,12 @@ func TestValues_MarshalerWithNilPointer(t *testing.T) {
 	}{}
 	v, err := Values(s)
 	if err != nil {
-		t.Errorf("Values(%q) returned error: %v", s, err)
+		t.Errorf("Values(%v) returned error: %v", s, err)
 	}
 
 	want := url.Values{}
 	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+		t.Errorf("Values(%v) returned %v, want %v", s, v, want)
 	}
 }
 
