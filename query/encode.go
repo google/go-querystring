@@ -93,6 +93,9 @@ type Encoder interface {
 // have "[]" appended to the value name. "numbered" will append a number to
 // the end of each incidence of the value name, example:
 // name0=value0&name1=value1, etc.
+// The combination of both "brackets" and "numbered" option signals that the
+// multiple URL values should have indexed brackets, example:
+// name[0]=value0&name[1]=value1, etc.
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -189,8 +192,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				del = ' '
 			} else if opts.Contains("semicolon") {
 				del = ';'
-			} else if opts.Contains("brackets") {
-				name = name + "[]"
 			}
 
 			if del != 0 {
@@ -205,14 +206,22 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					s.WriteString(valueString(sv.Index(i), opts))
 				}
 				values.Add(name, s.String())
-			} else {
-				for i := 0; i < sv.Len(); i++ {
-					k := name
-					if opts.Contains("numbered") {
-						k = fmt.Sprintf("%s%d", name, i)
-					}
-					values.Add(k, valueString(sv.Index(i), opts))
+				continue
+			}
+
+			b := opts.Contains("brackets")
+			n := opts.Contains("numbered")
+			if b && !n {
+				name = fmt.Sprintf("%s[]", name)
+			}
+			for i := 0; i < sv.Len(); i++ {
+				k := name
+				if b && n {
+					k = fmt.Sprintf("%s[%d]", name, i)
+				} else if n {
+					k = fmt.Sprintf("%s%d", name, i)
 				}
+				values.Add(k, valueString(sv.Index(i), opts))
 			}
 			continue
 		}
