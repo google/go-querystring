@@ -81,6 +81,8 @@ func TestValues_types(t *testing.T) {
 				I []string  `url:",brackets"`
 				J []string  `url:",semicolon"`
 				K []string  `url:",numbered"`
+				L []string  `url:",dotnumbered"`
+				M []string  `url:",numberd1"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},
@@ -93,6 +95,8 @@ func TestValues_types(t *testing.T) {
 				I: []string{"a", "b"},
 				J: []string{"a", "b"},
 				K: []string{"a", "b"},
+				L: []string{"a", "b"},
+				M: []string{"a", "b"},
 			},
 			url.Values{
 				"A":   {"a", "b"},
@@ -107,6 +111,10 @@ func TestValues_types(t *testing.T) {
 				"J":   {"a;b"},
 				"K0":  {"a"},
 				"K1":  {"b"},
+				"L.0": {"a"},
+				"L.1": {"b"},
+				"M1":  {"a"},
+				"M2":  {"b"},
 			},
 		},
 		{
@@ -325,4 +333,23 @@ func TestTagParsing(t *testing.T) {
 			t.Errorf("Contains(%q) = %v", tt.opt, !tt.want)
 		}
 	}
+}
+
+type Person struct {
+	Name    string   `url:"name,omitempty"`
+	Age     int      `url:"age,omitempty"`
+	Address []string `url:"address,omitempty,dotnumbered,numbered1"`
+}
+
+var user = Person{
+	Name:    "zhangsan",
+	Age:     10,
+	Address: []string{"sichuan", "chengdu"},
+}
+
+func Test_Manual(t *testing.T) {
+
+	values, _ := Values(user)
+	fmt.Println(values)
+	fmt.Println(values.Encode())
 }

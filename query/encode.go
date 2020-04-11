@@ -92,7 +92,12 @@ type Encoder interface {
 // Including the "brackets" option signals that the multiple URL values should
 // have "[]" appended to the value name. "numbered" will append a number to
 // the end of each incidence of the value name, example:
-// name0=value0&name1=value1, etc.
+// name0=value0&name1=value1, etc.  "dotnumbered" will append a number with a dot
+// to the end of each incidence of the value name, example:
+// name.0=value0&name.1=value1, etc.  "numbered1" will append a number
+// which start with 1 instead of 0 to the end of each incidence of the value name,
+// example:
+// name1=value0&name2=value1, etc.
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -207,9 +212,22 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
+					var n int
+					// number start with 1 instead of 0
+					if opts.Contains("numbered1") {
+						n = i + 1
+					} else {
+						n = i
+					}
+
 					k := name
+					// add number, such as "address0"
 					if opts.Contains("numbered") {
-						k = fmt.Sprintf("%s%d", name, i)
+						k = fmt.Sprintf("%s%d", name, n)
+					}
+					// add number with dot , such as "address.0"
+					if opts.Contains("dotnumbered") {
+						k = fmt.Sprintf("%s.%d", name, n)
 					}
 					values.Add(k, valueString(sv.Index(i), opts))
 				}
