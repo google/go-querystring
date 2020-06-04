@@ -185,6 +185,8 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			var del byte
 			if opts.Contains("comma") {
 				del = ','
+			} else if opts.Contains("dot") {
+				del = '.'
 			} else if opts.Contains("space") {
 				del = ' '
 			} else if opts.Contains("semicolon") {
