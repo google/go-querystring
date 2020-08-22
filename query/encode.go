@@ -152,10 +152,13 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 		name, opts := parseTag(tag)
 		if name == "" {
-			if sf.Anonymous && sv.Kind() == reflect.Struct {
-				// save embedded struct for later processing
-				embedded = append(embedded, sv)
-				continue
+			if sf.Anonymous {
+				v := reflect.Indirect(sv)
+				if v.IsValid() && v.Kind() == reflect.Struct {
+					// save embedded struct for later processing
+					embedded = append(embedded, v)
+					continue
+				}
 			}
 
 			name = sf.Name
