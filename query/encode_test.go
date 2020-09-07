@@ -25,6 +25,7 @@ type SubNested struct {
 func TestValues_types(t *testing.T) {
 	str := "string"
 	strPtr := &str
+	strSlice := []string{"a", "b"}
 	timeVal := time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)
 
 	tests := []struct {
@@ -81,6 +82,7 @@ func TestValues_types(t *testing.T) {
 				I []string  `url:",brackets"`
 				J []string  `url:",semicolon"`
 				K []string  `url:",numbered"`
+				L *[]string `url:",brackets"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},
@@ -93,6 +95,7 @@ func TestValues_types(t *testing.T) {
 				I: []string{"a", "b"},
 				J: []string{"a", "b"},
 				K: []string{"a", "b"},
+				L: &strSlice,
 			},
 			url.Values{
 				"A":   {"a", "b"},
@@ -107,6 +110,7 @@ func TestValues_types(t *testing.T) {
 				"J":   {"a;b"},
 				"K0":  {"a"},
 				"K1":  {"b"},
+				"L[]": {"a", "b"},
 			},
 		},
 		{
