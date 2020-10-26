@@ -355,6 +355,12 @@ func TestIsEmptyValue(t *testing.T) {
 		// time
 		{time.Time{}, true},
 		{time.Now(), false},
+
+		// unknown type - always false unless a nil pointer, which are always empty.
+		{(*struct{ int })(nil), true},
+		{struct{ int }{}, false},
+		{struct{ int }{0}, false},
+		{struct{ int }{1}, false},
 	}
 
 	for _, tt := range tests {
