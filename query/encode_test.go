@@ -94,6 +94,10 @@ func TestValues_Pointers(t *testing.T) {
 		{struct{ V *string }{&str}, url.Values{"V": {"s"}}},
 		{struct{ V **string }{&strPtr}, url.Values{"V": {"s"}}},
 
+		// slices of pointer values
+		{struct{ V []*string }{}, url.Values{}},
+		{struct{ V []*string }{[]*string{&str, &str}}, url.Values{"V": {"s", "s"}}},
+
 		// pointer values for the input struct itself
 		{(*struct{})(nil), url.Values{}},
 		{&struct{}{}, url.Values{}},
