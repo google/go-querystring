@@ -10,125 +10,216 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
-type Nested struct {
-	A   SubNested  `url:"a"`
-	B   *SubNested `url:"b"`
-	Ptr *SubNested `url:"ptr,omitempty"`
+// test that Values(input) matches want.  If not, report an error on t.
+func testValue(t *testing.T, input interface{}, want url.Values) {
+	v, err := Values(input)
+	if err != nil {
+		t.Errorf("Values(%q) returned error: %v", input, err)
+	}
+	if diff := cmp.Diff(want, v); diff != "" {
+		t.Errorf("Values(%q) mismatch:\n%s", input, diff)
+	}
 }
 
-type SubNested struct {
-	Value string `url:"value"`
+func TestValues_BasicTypes(t *testing.T) {
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		// zero values
+		{struct{ V string }{}, url.Values{"V": {""}}},
+		{struct{ V int }{}, url.Values{"V": {"0"}}},
+		{struct{ V uint }{}, url.Values{"V": {"0"}}},
+		{struct{ V float32 }{}, url.Values{"V": {"0"}}},
+		{struct{ V bool }{}, url.Values{"V": {"false"}}},
+
+		// simple non-zero values
+		{struct{ V string }{"v"}, url.Values{"V": {"v"}}},
+		{struct{ V int }{1}, url.Values{"V": {"1"}}},
+		{struct{ V uint }{1}, url.Values{"V": {"1"}}},
+		{struct{ V float32 }{0.1}, url.Values{"V": {"0.1"}}},
+		{struct{ V bool }{true}, url.Values{"V": {"true"}}},
+
+		// bool-specific options
+		{
+			struct {
+				V bool `url:",int"`
+			}{false},
+			url.Values{"V": {"0"}},
+		},
+		{
+			struct {
+				V bool `url:",int"`
+			}{true},
+			url.Values{"V": {"1"}},
+		},
+
+		// time values
+		{
+			struct {
+				V time.Time
+			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
+			url.Values{"V": {"2000-01-01T12:34:56Z"}},
+		},
+		{
+			struct {
+				V time.Time `url:",unix"`
+			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
+			url.Values{"V": {"946730096"}},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
 }
 
-func TestValues_types(t *testing.T) {
-	str := "string"
+func TestValues_Pointers(t *testing.T) {
+	str := "s"
 	strPtr := &str
-	timeVal := time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)
 
 	tests := []struct {
-		in   interface{}
-		want url.Values
+		input interface{}
+		want  url.Values
 	}{
+		// nil pointers (zero values)
+		{struct{ V *string }{}, url.Values{"V": {""}}},
+		{struct{ V *int }{}, url.Values{"V": {""}}},
+
+		// non-zero pointer values
+		{struct{ V *string }{&str}, url.Values{"V": {"s"}}},
+		{struct{ V **string }{&strPtr}, url.Values{"V": {"s"}}},
+
+		// pointer values for the input struct itself
+		{(*struct{})(nil), url.Values{}},
+		{&struct{}{}, url.Values{}},
+		{&struct{ V string }{}, url.Values{"V": {""}}},
+		{&struct{ V string }{"v"}, url.Values{"V": {"v"}}},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
+func TestValues_Slices(t *testing.T) {
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		// slices of strings
 		{
-			// basic primitives
-			struct {
-				A string
-				B int
-				C uint
-				D float32
-				E bool
-			}{},
-			url.Values{
-				"A": {""},
-				"B": {"0"},
-				"C": {"0"},
-				"D": {"0"},
-				"E": {"false"},
-			},
+			struct{ V []string }{},
+			url.Values{},
 		},
 		{
-			// pointers
-			struct {
-				A *string
-				B *int
-				C **string
-				D *time.Time
-			}{
-				A: strPtr,
-				C: &strPtr,
-				D: &timeVal,
-			},
-			url.Values{
-				"A": {str},
-				"B": {""},
-				"C": {str},
-				"D": {"2000-01-01T12:34:56Z"},
-			},
+			struct{ V []string }{[]string{"a", "b"}},
+			url.Values{"V": {"a", "b"}},
 		},
 		{
-			// slices and arrays
 			struct {
-				A []string
-				B []string `url:",comma"`
-				C []string `url:",space"`
-				D [2]string
-				E [2]string `url:",comma"`
-				F [2]string `url:",space"`
-				G []*string `url:",space"`
-				H []bool    `url:",int,space"`
-				I []string  `url:",brackets"`
-				J []string  `url:",semicolon"`
-				K []string  `url:",numbered"`
-			}{
-				A: []string{"a", "b"},
-				B: []string{"a", "b"},
-				C: []string{"a", "b"},
-				D: [2]string{"a", "b"},
-				E: [2]string{"a", "b"},
-				F: [2]string{"a", "b"},
-				G: []*string{&str, &str},
-				H: []bool{true, false},
-				I: []string{"a", "b"},
-				J: []string{"a", "b"},
-				K: []string{"a", "b"},
-			},
-			url.Values{
-				"A":   {"a", "b"},
-				"B":   {"a,b"},
-				"C":   {"a b"},
-				"D":   {"a", "b"},
-				"E":   {"a,b"},
-				"F":   {"a b"},
-				"G":   {"string string"},
-				"H":   {"1 0"},
-				"I[]": {"a", "b"},
-				"J":   {"a;b"},
-				"K0":  {"a"},
-				"K1":  {"b"},
-			},
+				V []string `url:",comma"`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a,b"}},
 		},
 		{
-			// other types
 			struct {
-				A time.Time
-				B time.Time `url:",unix"`
-				C bool      `url:",int"`
-				D bool      `url:",int"`
-			}{
-				A: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
-				B: time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC),
-				C: true,
-				D: false,
-			},
-			url.Values{
-				"A": {"2000-01-01T12:34:56Z"},
-				"B": {"946730096"},
-				"C": {"1"},
-				"D": {"0"},
-			},
+				V []string `url:",space"`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a b"}},
 		},
+		{
+			struct {
+				V []string `url:",semicolon"`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a;b"}},
+		},
+		{
+			struct {
+				V []string `url:",brackets"`
+			}{[]string{"a", "b"}},
+			url.Values{"V[]": {"a", "b"}},
+		},
+		{
+			struct {
+				V []string `url:",numbered"`
+			}{[]string{"a", "b"}},
+			url.Values{"V0": {"a"}, "V1": {"b"}},
+		},
+
+		// arrays of strings
+		{
+			struct{ V [2]string }{},
+			url.Values{"V": {"", ""}},
+		},
+		{
+			struct{ V [2]string }{[2]string{"a", "b"}},
+			url.Values{"V": {"a", "b"}},
+		},
+		{
+			struct {
+				V [2]string `url:",comma"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V": {"a,b"}},
+		},
+		{
+			struct {
+				V [2]string `url:",space"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V": {"a b"}},
+		},
+		{
+			struct {
+				V [2]string `url:",semicolon"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V": {"a;b"}},
+		},
+		{
+			struct {
+				V [2]string `url:",brackets"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V[]": {"a", "b"}},
+		},
+		{
+			struct {
+				V [2]string `url:",numbered"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V0": {"a"}, "V1": {"b"}},
+		},
+
+		// slice of bools with additional options
+		{
+			struct {
+				V []bool `url:",space,int"`
+			}{[]bool{true, false}},
+			url.Values{"V": {"1 0"}},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
+func TestValues_NestedTypes(t *testing.T) {
+	type SubNested struct {
+		Value string `url:"value"`
+	}
+
+	type Nested struct {
+		A   SubNested  `url:"a"`
+		B   *SubNested `url:"b"`
+		Ptr *SubNested `url:"ptr,omitempty"`
+	}
+
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		{
 			struct {
 				Nest Nested `url:"nest"`
@@ -166,15 +257,8 @@ func TestValues_types(t *testing.T) {
 		},
 	}
 
-	for i, tt := range tests {
-		v, err := Values(tt.in)
-		if err != nil {
-			t.Errorf("%d. Values(%q) returned error: %v", i, tt.in, err)
-		}
-
-		if !reflect.DeepEqual(tt.want, v) {
-			t.Errorf("%d. Values(%q) returned %v, want %v", i, tt.in, v, tt.want)
-		}
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
