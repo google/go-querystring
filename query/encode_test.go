@@ -368,7 +368,6 @@ func TestIsEmptyValue(t *testing.T) {
 		want := tt.empty
 		if got != want {
 			t.Errorf("isEmptyValue(%v) returned %t; want %t", tt.value, got, want)
-
 		}
 	}
 }
