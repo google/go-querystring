@@ -230,7 +230,9 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			reflectValue(values, sv, name)
+			if err := reflectValue(values, sv, name); err != nil {
+				return err
+			}
 			continue
 		}
 
