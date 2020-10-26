@@ -307,7 +307,67 @@ func TestValues_MarshalerWithNilPointer(t *testing.T) {
 	}
 }
 
-func TestTagParsing(t *testing.T) {
+func TestIsEmptyValue(t *testing.T) {
+	str := "string"
+	tests := []struct {
+		value interface{}
+		empty bool
+	}{
+		// slices, arrays, and maps
+		{[]int{}, true},
+		{[]int{0}, false},
+		{[0]int{}, true},
+		{[3]int{}, false},
+		{[3]int{1}, false},
+		{map[string]string{}, true},
+		{map[string]string{"a": "b"}, false},
+
+		// strings
+		{"", true},
+		{" ", false},
+		{"a", false},
+
+		// bool
+		{true, false},
+		{false, true},
+
+		// ints of various types
+		{(int)(0), true}, {(int)(1), false}, {(int)(-1), false},
+		{(int8)(0), true}, {(int8)(1), false}, {(int8)(-1), false},
+		{(int16)(0), true}, {(int16)(1), false}, {(int16)(-1), false},
+		{(int32)(0), true}, {(int32)(1), false}, {(int32)(-1), false},
+		{(int64)(0), true}, {(int64)(1), false}, {(int64)(-1), false},
+		{(uint)(0), true}, {(uint)(1), false},
+		{(uint8)(0), true}, {(uint8)(1), false},
+		{(uint16)(0), true}, {(uint16)(1), false},
+		{(uint32)(0), true}, {(uint32)(1), false},
+		{(uint64)(0), true}, {(uint64)(1), false},
+
+		// floats
+		{(float32)(0), true}, {(float32)(0.0), true}, {(float32)(0.1), false},
+		{(float64)(0), true}, {(float64)(0.0), true}, {(float64)(0.1), false},
+
+		// pointers
+		{(*int)(nil), true},
+		{new([]int), false},
+		{&str, false},
+
+		// time
+		{time.Time{}, true},
+		{time.Now(), false},
+	}
+
+	for _, tt := range tests {
+		got := isEmptyValue(reflect.ValueOf(tt.value))
+		want := tt.empty
+		if got != want {
+			t.Errorf("isEmptyValue(%v) returned %t; want %t", tt.value, got, want)
+
+		}
+	}
+}
+
+func TestParseTag(t *testing.T) {
 	name, opts := parseTag("field,foobar,foo")
 	if name != "field" {
 		t.Fatalf("name = %q, want field", name)
