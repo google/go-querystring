@@ -5,6 +5,7 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -230,12 +231,12 @@ func TestValues_NestedTypes(t *testing.T) {
 			}{
 				Nested{
 					A: SubNested{
-						Value: "that",
+						Value: "v",
 					},
 				},
 			},
 			url.Values{
-				"nest[a][value]": {"that"},
+				"nest[a][value]": {"v"},
 				"nest[b]":        {""},
 			},
 		},
@@ -245,14 +246,14 @@ func TestValues_NestedTypes(t *testing.T) {
 			}{
 				Nested{
 					Ptr: &SubNested{
-						Value: "that",
+						Value: "v",
 					},
 				},
 			},
 			url.Values{
 				"nest[a][value]":   {""},
 				"nest[b]":          {""},
-				"nest[ptr][value]": {"that"},
+				"nest[ptr][value]": {"v"},
 			},
 		},
 		{
@@ -266,132 +267,178 @@ func TestValues_NestedTypes(t *testing.T) {
 	}
 }
 
-func TestValues_omitEmpty(t *testing.T) {
+func TestValues_OmitEmpty(t *testing.T) {
 	str := ""
-	s := struct {
-		a string
-		A string
-		B string  `url:",omitempty"`
-		C string  `url:"-"`
-		D string  `url:"omitempty"` // actually named omitempty, not an option
-		E *string `url:",omitempty"`
-	}{E: &str}
 
-	v, err := Values(s)
-	if err != nil {
-		t.Errorf("Values(%v) returned error: %v", s, err)
-	}
-
-	want := url.Values{
-		"A":         {""},
-		"omitempty": {""},
-		"E":         {""}, // E is included because the pointer is not empty, even though the string being pointed to is
-	}
-	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%v) returned %v, want %v", s, v, want)
-	}
-}
-
-type A struct {
-	B
-}
-
-type B struct {
-	C string
-}
-
-type D struct {
-	B
-	C string
-}
-
-type e struct {
-	B
-	C string
-}
-
-type F struct {
-	e
-}
-
-func TestValues_embeddedStructs(t *testing.T) {
 	tests := []struct {
-		in   interface{}
-		want url.Values
+		input interface{}
+		want  url.Values
+	}{
+		{struct{ v string }{}, url.Values{}}, // non-exported field
+		{
+			struct {
+				V string `url:",omitempty"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V string `url:"-"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V string `url:"omitempty"` // actually named omitempty
+			}{},
+			url.Values{"omitempty": {""}},
+		},
+		{
+			// include value for a non-nil pointer to an empty value
+			struct {
+				V *string `url:",omitempty"`
+			}{&str},
+			url.Values{"V": {""}},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
+func TestValues_EmbeddedStructs(t *testing.T) {
+	type Inner struct {
+		V string
+	}
+	type Outer struct {
+		Inner
+	}
+	type Mixed struct {
+		Inner
+		V string
+	}
+	type unexported struct {
+		Inner
+		V string
+	}
+	type Exported struct {
+		unexported
+	}
+
+	tests := []struct {
+		input interface{}
+		want  url.Values
 	}{
 		{
-			A{B{C: "foo"}},
-			url.Values{"C": {"foo"}},
+			Outer{Inner{V: "a"}},
+			url.Values{"V": {"a"}},
 		},
 		{
-			D{B: B{C: "bar"}, C: "foo"},
-			url.Values{"C": {"foo", "bar"}},
+			Mixed{Inner: Inner{V: "a"}, V: "b"},
+			url.Values{"V": {"b", "a"}},
 		},
 		{
-			F{e{B: B{C: "bar"}, C: "foo"}}, // With unexported embed
-			url.Values{"C": {"foo", "bar"}},
+			// values from unexported embed are still included
+			Exported{
+				unexported{
+					Inner: Inner{V: "bar"},
+					V:     "foo",
+				},
+			},
+			url.Values{"V": {"foo", "bar"}},
 		},
 	}
 
-	for i, tt := range tests {
-		v, err := Values(tt.in)
-		if err != nil {
-			t.Errorf("%d. Values(%q) returned error: %v", i, tt.in, err)
-		}
-
-		if !reflect.DeepEqual(tt.want, v) {
-			t.Errorf("%d. Values(%q) returned %v, want %v", i, tt.in, v, tt.want)
-		}
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
-func TestValues_invalidInput(t *testing.T) {
+func TestValues_InvalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
 		t.Errorf("expected Values() to return an error on invalid input")
 	}
 }
 
-type EncodedArgs []string
+// customEncodedStrings is a slice of strings with a custom URL encoding
+type customEncodedStrings []string
 
-func (m EncodedArgs) EncodeValues(key string, v *url.Values) error {
+// EncodeValues using key name of the form "{key}.N" where N increments with
+// each value.  A value of "err" will return an error.
+func (m customEncodedStrings) EncodeValues(key string, v *url.Values) error {
 	for i, arg := range m {
+		if arg == "err" {
+			return errors.New("encoding error")
+		}
 		v.Set(fmt.Sprintf("%s.%d", key, i), arg)
 	}
 	return nil
 }
 
-func TestValues_Marshaler(t *testing.T) {
-	s := struct {
-		Args EncodedArgs `url:"arg"`
-	}{[]string{"a", "b", "c"}}
-	v, err := Values(s)
-	if err != nil {
-		t.Errorf("Values(%q) returned error: %v", s, err)
+func TestValues_CustomEncoding(t *testing.T) {
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			struct {
+				V customEncodedStrings `url:"v"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V customEncodedStrings `url:"v"`
+			}{[]string{"a", "b"}},
+			url.Values{"v.0": {"a"}, "v.1": {"b"}},
+		},
+
+		// pointers to custom encoded types
+		{
+			struct {
+				V *customEncodedStrings `url:"v"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V *customEncodedStrings `url:"v"`
+			}{(*customEncodedStrings)(&[]string{"a", "b"})},
+			url.Values{"v.0": {"a"}, "v.1": {"b"}},
+		},
 	}
 
-	want := url.Values{
-		"arg.0": {"a"},
-		"arg.1": {"b"},
-		"arg.2": {"c"},
-	}
-	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%q) returned %v, want %v", s, v, want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
-func TestValues_MarshalerWithNilPointer(t *testing.T) {
-	s := struct {
-		Args *EncodedArgs `url:"arg"`
-	}{}
-	v, err := Values(s)
-	if err != nil {
-		t.Errorf("Values(%v) returned error: %v", s, err)
+// One of the few ways reflectValues will return an error is if a custom
+// encoder returns an error.  Test all of the various ways that can happen.
+func TestValues_CustomEncoding_Error(t *testing.T) {
+	type st struct {
+		V customEncodedStrings
 	}
-
-	want := url.Values{}
-	if !reflect.DeepEqual(want, v) {
-		t.Errorf("Values(%v) returned %v, want %v", s, v, want)
+	tests := []struct {
+		input interface{}
+	}{
+		{
+			st{[]string{"err"}},
+		},
+		{ // struct field
+			struct{ S st }{st{[]string{"err"}}},
+		},
+		{ // embedded struct
+			struct{ st }{st{[]string{"err"}}},
+		},
+	}
+	for _, tt := range tests {
+		_, err := Values(tt.input)
+		if err == nil {
+			t.Errorf("Values(%q) did not return expected encoding error", tt.input)
+		}
 	}
 }
 
