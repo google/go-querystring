@@ -33,7 +33,11 @@ fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
 
 [go-github]: https://github.com/google/go-github/commit/994f6f8405f052a117d2d0b500054341048fbb08
 
-## License ##
+## Alternatives ##
 
-This library is distributed under the BSD-style license found in the [LICENSE](./LICENSE)
-file.
+If you are looking for a library that can both encode and decode query strings,
+you might consider one of these alternatives:
+
+ - https://github.com/gorilla/schema
+ - https://github.com/pasztorpisti/qs
+ - https://github.com/hetiansu5/urlquery
