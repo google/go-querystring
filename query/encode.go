@@ -151,6 +151,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 		name, opts := parseTag(tag)
+
 		if name == "" {
 			if sf.Anonymous && sv.Kind() == reflect.Struct {
 				// save embedded struct for later processing
@@ -167,6 +168,13 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 		if opts.Contains("omitempty") && isEmptyValue(sv) {
 			continue
+		}
+
+		for sv.Kind() == reflect.Ptr {
+			if sv.IsNil() {
+				break
+			}
+			sv = sv.Elem()
 		}
 
 		if sv.Type().Implements(encoderType) {
@@ -215,13 +223,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				}
 			}
 			continue
-		}
-
-		for sv.Kind() == reflect.Ptr {
-			if sv.IsNil() {
-				break
-			}
-			sv = sv.Elem()
 		}
 
 		if sv.Type() == timeType {
