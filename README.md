@@ -4,7 +4,7 @@
 [![Test Status](https://github.com/google/go-querystring/workflows/tests/badge.svg)](https://github.com/google/go-querystring/actions?query=workflow%3Atests)
 [![Test Coverage](https://codecov.io/gh/google/go-querystring/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-querystring)
 
-go-querystring is Go library for encoding structs into URL query parameters.
+go-querystring is a Go library for encoding structs into URL query parameters.
 
 ## Usage ##
 
