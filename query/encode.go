@@ -51,8 +51,8 @@ type Encoder interface {
 //	- the field is empty and its tag specifies the "omitempty" option
 //
 // The empty values are false, 0, any nil pointer or interface value, any array
-// slice, map, or string of length zero, and any time.Time that returns true
-// for IsZero().
+// slice, map, or string of length zero, and any type (such as time.Time) that
+// returns true for IsZero().
 //
 // The URL parameter name defaults to the struct field name but can be
 // specified in the struct field's tag value.  The "url" key in the struct
@@ -294,8 +294,12 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.IsNil()
 	}
 
-	if v.Type() == timeType {
-		return v.Interface().(time.Time).IsZero()
+	type zeroable interface {
+		IsZero() bool
+	}
+
+	if z, ok := v.Interface().(zeroable); ok {
+		return z.IsZero()
 	}
 
 	return false
