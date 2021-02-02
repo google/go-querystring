@@ -31,7 +31,11 @@ v, _ := query.Values(opt)
 fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
 ```
 
+See the [package godocs][] for complete documentation on supported types and
+formatting options.
+
 [go-github]: https://github.com/google/go-github/commit/994f6f8405f052a117d2d0b500054341048fbb08
+[package godocs]: https://pkg.go.dev/github.com/google/go-querystring/query
 
 ## Alternatives ##
 

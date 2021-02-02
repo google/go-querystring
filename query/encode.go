@@ -82,7 +82,9 @@ type Encoder interface {
 //
 // time.Time values default to encoding as RFC3339 timestamps.  Including the
 // "unix" option signals that the field should be encoded as a Unix time (see
-// time.Unix())
+// time.Unix()).  The "unixmilli" and "unixnano" options will encode the number
+// of milliseconds and nanoseconds, respectively, since January 1, 1970 (see
+// time.UnixNano()).
 //
 // Slice and Array values default to encoding as multiple URL values of the
 // same name.  Including the "comma" option signals that the field should be
@@ -269,6 +271,12 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		t := v.Interface().(time.Time)
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
+		}
+		if opts.Contains("unixmilli") {
+			return strconv.FormatInt((t.UnixNano() / 1e6), 10)
+		}
+		if opts.Contains("unixnano") {
+			return strconv.FormatInt(t.UnixNano(), 10)
 		}
 		return t.Format(time.RFC3339)
 	}
