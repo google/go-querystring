@@ -72,6 +72,18 @@ func TestValues_BasicTypes(t *testing.T) {
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"946730096"}},
 		},
+		{
+			struct {
+				V time.Time `url:",epochmilli"`
+			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
+			url.Values{"V": {"946730096000"}},
+		},
+		{
+			struct {
+				V time.Time `url:",epochnano"`
+			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
+			url.Values{"V": {"946730096000000000"}},
+		},
 	}
 
 	for _, tt := range tests {

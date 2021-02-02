@@ -270,6 +270,12 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
+		if opts.Contains("epochmilli") {
+			return strconv.FormatInt((t.UnixNano() / 1000000), 10)
+		}
+		if opts.Contains("epochnano") {
+			return strconv.FormatInt(t.UnixNano(), 10)
+		}
 		return t.Format(time.RFC3339)
 	}
 

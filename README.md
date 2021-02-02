@@ -21,14 +21,17 @@ The query package exports a single `Values()` function.  A simple example:
 
 ```go
 type Options struct {
-  Query   string `url:"q"`
-  ShowAll bool   `url:"all"`
-  Page    int    `url:"page"`
+  Query       string     `url:"q"`
+  ShowAll     bool       `url:"all"`
+  Page        int        `url:"page"`
+  UnixSecond  time.Time  `url:"seconds,unix"`
+  UnixMilli   time.Time  `url:"millis,epochmilli"`
+  UnixNano    time.Time  `url:"nano,epochnano"`
 }
 
 opt := Options{ "foo", true, 2 }
 v, _ := query.Values(opt)
-fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
+fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2&seconds=123456789&millis=123456789000&nano=12345678000000000"
 ```
 
 [go-github]: https://github.com/google/go-github/commit/994f6f8405f052a117d2d0b500054341048fbb08
