@@ -356,6 +356,9 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	type Outer struct {
 		Inner
 	}
+	type OuterPtr struct {
+		*Inner
+	}
 	type Mixed struct {
 		Inner
 		V string
@@ -374,6 +377,10 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}{
 		{
 			Outer{Inner{V: "a"}},
+			url.Values{"V": {"a"}},
+		},
+		{
+			OuterPtr{&Inner{V: "a"}},
 			url.Values{"V": {"a"}},
 		},
 		{
