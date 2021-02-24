@@ -1,6 +1,6 @@
 # go-querystring #
 
-[![GoDoc](https://img.shields.io/static/v1?label=godoc&message=reference&color=blue)](https://pkg.go.dev/github.com/google/go-querystring/query)
+[![Go Reference](https://pkg.go.dev/badge/github.com/google/go-querystring/query.svg)](https://pkg.go.dev/github.com/google/go-querystring/query)
 [![Test Status](https://github.com/google/go-querystring/workflows/tests/badge.svg)](https://github.com/google/go-querystring/actions?query=workflow%3Atests)
 [![Test Coverage](https://codecov.io/gh/google/go-querystring/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-querystring)
 
