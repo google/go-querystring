@@ -553,9 +553,10 @@ type customEncodedIntPtr int
 // values cause an error.
 func (m *customEncodedIntPtr) EncodeValues(key string, v *url.Values) error {
 	if m == nil {
-		return nil
+		v.Set(key, "undefined")
+	} else {
+		v.Set(key, fmt.Sprintf("_%d", *m))
 	}
-	v.Set(key, fmt.Sprintf("_%d", *m))
 	return nil
 }
 
@@ -594,7 +595,7 @@ func TestValues_CustomEncodingPointer(t *testing.T) {
 			struct {
 				V *customEncodedIntPtr `url:"v"`
 			}{},
-			url.Values{"v": {"_0"}},
+			url.Values{"v": {"undefined"}},
 		},
 		{
 			struct {
@@ -606,19 +607,19 @@ func TestValues_CustomEncodingPointer(t *testing.T) {
 			struct {
 				V *customEncodedIntPtr `url:"v"`
 			}{&zero},
-			url.Values{"v": {"0"}},
+			url.Values{"v": {"_0"}},
 		},
 		{
 			struct {
 				V *customEncodedIntPtr `url:"v,omitempty"`
 			}{&zero},
-			url.Values{"v": {"0"}},
+			url.Values{"v": {"_0"}},
 		},
 		{
 			struct {
 				V *customEncodedIntPtr `url:"v"`
 			}{&one},
-			url.Values{"v": {"1"}},
+			url.Values{"v": {"_1"}},
 		},
 	}
 
