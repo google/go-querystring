@@ -212,7 +212,7 @@ func TestValues_Slices(t *testing.T) {
 			url.Values{"V0": {"a"}, "V1": {"b"}},
 		},
 
-		// custom delimeters
+		// custom delimiters
 		{
 			struct {
 				V []string `del:","`
