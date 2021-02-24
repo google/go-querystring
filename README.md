@@ -19,20 +19,67 @@ to enforce the type safety of your parameters, for example, as is done in the
 
 The query package exports a single `Values()` function.  A simple example:
 
-```go
-type Options struct {
+``` go
+type opt struct {
   Query   string `url:"q"`
   ShowAll bool   `url:"all"`
   Page    int    `url:"page"`
 }
 
-opt := Options{ "foo", true, 2 }
-v, _ := query.Values(opt)
+v, _ := query.Values(opt{"foo", true, 2})
 fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
 ```
 
-See the [package godocs][] for complete documentation on supported types and
-formatting options.
+### Supported types and options ###
+
+The [package godocs][] are the authoritative source for documentation on
+supported types and formatting options, but illustrative examples are provided
+here as well.
+
+#### booleans
+
+By default, boolean values are encoded as the words "true" or "false":
+
+``` go
+type opt struct {
+  V bool `url:"v"`
+}
+
+query.Values(opt{true}) // result: "v=true"
+```
+
+Adding the `int` option causes the field to be encoded as a "1" or "0":
+
+``` go
+type opt struct {
+  V bool `url:v,int`
+}
+
+query.Values(opt{false}) // result: "v=0"
+```
+
+#### time
+
+By default, time values are encoded as RFC3339 timestamps:
+
+``` go
+type opt struct {
+  V time.Time `url:"v"`
+}
+
+query.Values(opt{false}) // result: "v=0"
+```
+
+Adding the `unix` option encodes as a UNIX timestamp (seconds since Jan 1, 1970)
+
+``` go
+type opt struct {
+  V time.Time `url:"v,unix"`
+}
+
+query.Values(opt{false}) // result: "v=0"
+```
+
 
 [go-github]: https://github.com/google/go-github/commit/994f6f8405f052a117d2d0b500054341048fbb08
 [package godocs]: https://pkg.go.dev/github.com/google/go-querystring/query
