@@ -84,6 +84,12 @@ func TestValues_BasicTypes(t *testing.T) {
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"946730096000000000"}},
 		},
+		{
+			struct {
+				V time.Time `layout:"2006-01-02"`
+			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
+			url.Values{"V": {"2000-01-01"}},
+		},
 	}
 
 	for _, tt := range tests {

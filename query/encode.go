@@ -84,7 +84,12 @@ type Encoder interface {
 // "unix" option signals that the field should be encoded as a Unix time (see
 // time.Unix()).  The "unixmilli" and "unixnano" options will encode the number
 // of milliseconds and nanoseconds, respectively, since January 1, 1970 (see
-// time.UnixNano()).
+// time.UnixNano()).  Including the "layout" struct tag (separate from the
+// "url" tag) will use the value of the "layout" tag as a layout passed to
+// time.Format.  For example:
+//
+// 	// Encode a time.Time as YYYY-MM-DD
+// 	Field time.Time `layout:"2006-01-02"`
 //
 // Slice and Array values default to encoding as multiple URL values of the
 // same name.  Including the "comma" option signals that the field should be
@@ -223,7 +228,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					} else {
 						s.WriteString(del)
 					}
-					s.WriteString(valueString(sv.Index(i), opts))
+					s.WriteString(valueString(sv.Index(i), opts, sf))
 				}
 				values.Add(name, s.String())
 			} else {
@@ -232,14 +237,14 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					if opts.Contains("numbered") {
 						k = fmt.Sprintf("%s%d", name, i)
 					}
-					values.Add(k, valueString(sv.Index(i), opts))
+					values.Add(k, valueString(sv.Index(i), opts, sf))
 				}
 			}
 			continue
 		}
 
 		if sv.Type() == timeType {
-			values.Add(name, valueString(sv, opts))
+			values.Add(name, valueString(sv, opts, sf))
 			continue
 		}
 
@@ -250,7 +255,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
-		values.Add(name, valueString(sv, opts))
+		values.Add(name, valueString(sv, opts, sf))
 	}
 
 	for _, f := range embedded {
@@ -263,7 +268,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 }
 
 // valueString returns the string representation of a value.
-func valueString(v reflect.Value, opts tagOptions) string {
+func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) string {
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return ""
@@ -288,6 +293,9 @@ func valueString(v reflect.Value, opts tagOptions) string {
 		}
 		if opts.Contains("unixnano") {
 			return strconv.FormatInt(t.UnixNano(), 10)
+		}
+		if layout := sf.Tag.Get("layout"); layout != "" {
+			return t.Format(layout)
 		}
 		return t.Format(time.RFC3339)
 	}
