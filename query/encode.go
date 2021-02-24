@@ -98,8 +98,8 @@ type Encoder interface {
 // from the "url" tag) will use the value of the "del" tag as the delimiter.
 // For example:
 //
-//      // Encode a slice of bools as ints ("1" for true, "0" for false),
-//      // separated by exclamation points "!".
+// 	// Encode a slice of bools as ints ("1" for true, "0" for false),
+// 	// separated by exclamation points "!".
 // 	Field []bool `url:",int" del:"!"`
 //
 // Anonymous struct fields are usually encoded as if their inner exported
