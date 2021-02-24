@@ -212,6 +212,26 @@ func TestValues_Slices(t *testing.T) {
 			url.Values{"V0": {"a"}, "V1": {"b"}},
 		},
 
+		// custom delimeters
+		{
+			struct {
+				V []string `del:","`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a,b"}},
+		},
+		{
+			struct {
+				V []string `del:"|"`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a|b"}},
+		},
+		{
+			struct {
+				V []string `del:"🥑"`
+			}{[]string{"a", "b"}},
+			url.Values{"V": {"a🥑b"}},
+		},
+
 		// slice of bools with additional options
 		{
 			struct {

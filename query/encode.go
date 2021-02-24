@@ -94,7 +94,13 @@ type Encoder interface {
 // Including the "brackets" option signals that the multiple URL values should
 // have "[]" appended to the value name. "numbered" will append a number to
 // the end of each incidence of the value name, example:
-// name0=value0&name1=value1, etc.
+// name0=value0&name1=value1, etc.  Including the "del" struct tag (separate
+// from the "url" tag) will use the value of the "del" tag as the delimiter.
+// For example:
+//
+//      // Encode a slice of bools as ints ("1" for true, "0" for false),
+//      // separated by exclamation points "!".
+// 	Field []bool `url:",int" del:"!"`
 //
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
@@ -192,25 +198,27 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
-			var del byte
+			var del string
 			if opts.Contains("comma") {
-				del = ','
+				del = ","
 			} else if opts.Contains("space") {
-				del = ' '
+				del = " "
 			} else if opts.Contains("semicolon") {
-				del = ';'
+				del = ";"
 			} else if opts.Contains("brackets") {
 				name = name + "[]"
+			} else {
+				del = sf.Tag.Get("del")
 			}
 
-			if del != 0 {
+			if del != "" {
 				s := new(bytes.Buffer)
 				first := true
 				for i := 0; i < sv.Len(); i++ {
 					if first {
 						first = false
 					} else {
-						s.WriteByte(del)
+						s.WriteString(del)
 					}
 					s.WriteString(valueString(sv.Index(i), opts))
 				}
