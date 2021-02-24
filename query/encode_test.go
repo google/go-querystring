@@ -22,7 +22,7 @@ func testValue(t *testing.T, input interface{}, want url.Values) {
 		t.Errorf("Values(%q) returned error: %v", input, err)
 	}
 	if diff := cmp.Diff(want, v); diff != "" {
-		t.Errorf("Values(%q) mismatch:\n%s", input, diff)
+		t.Errorf("Values(%#v) mismatch:\n%s", input, diff)
 	}
 }
 
@@ -413,7 +413,7 @@ func (m customEncodedStrings) EncodeValues(key string, v *url.Values) error {
 	return nil
 }
 
-func TestValues_CustomEncoding(t *testing.T) {
+func TestValues_CustomEncodingSlice(t *testing.T) {
 	tests := []struct {
 		input interface{}
 		want  url.Values
@@ -475,6 +475,155 @@ func TestValues_CustomEncoding_Error(t *testing.T) {
 		if err == nil {
 			t.Errorf("Values(%q) did not return expected encoding error", tt.input)
 		}
+	}
+}
+
+// customEncodedInt is an int with a custom URL encoding
+type customEncodedInt int
+
+// EncodeValues encodes values with leading underscores
+func (m customEncodedInt) EncodeValues(key string, v *url.Values) error {
+	v.Set(key, fmt.Sprintf("_%d", m))
+	return nil
+}
+
+func TestValues_CustomEncodingInt(t *testing.T) {
+	var zero customEncodedInt = 0
+	var one customEncodedInt = 1
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			struct {
+				V customEncodedInt `url:"v"`
+			}{},
+			url.Values{"v": {"_0"}},
+		},
+		{
+			struct {
+				V customEncodedInt `url:"v,omitempty"`
+			}{zero},
+			url.Values{},
+		},
+		{
+			struct {
+				V customEncodedInt `url:"v"`
+			}{one},
+			url.Values{"v": {"_1"}},
+		},
+
+		// pointers to custom encoded types
+		{
+			struct {
+				V *customEncodedInt `url:"v"`
+			}{},
+			url.Values{"v": {"_0"}},
+		},
+		{
+			struct {
+				V *customEncodedInt `url:"v,omitempty"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V *customEncodedInt `url:"v,omitempty"`
+			}{&zero},
+			url.Values{"v": {"_0"}},
+		},
+		{
+			struct {
+				V *customEncodedInt `url:"v"`
+			}{&one},
+			url.Values{"v": {"_1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
+// customEncodedInt is an int with a custom URL encoding defined on its pointer
+// value.
+type customEncodedIntPtr int
+
+// EncodeValues encodes a 0 as false, 1 as true, and nil as unknown.  All other
+// values cause an error.
+func (m *customEncodedIntPtr) EncodeValues(key string, v *url.Values) error {
+	if m == nil {
+		return nil
+	}
+	v.Set(key, fmt.Sprintf("_%d", *m))
+	return nil
+}
+
+// Test behavior when encoding is defined for a pointer of a custom type.
+// Custom type should be able to encode values for nil pointers.
+func TestValues_CustomEncodingPointer(t *testing.T) {
+	var zero customEncodedIntPtr = 0
+	var one customEncodedIntPtr = 1
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		// non-pointer values do not get the custom encoding because
+		// they don't implement the encoder interface.
+		{
+			struct {
+				V customEncodedIntPtr `url:"v"`
+			}{},
+			url.Values{"v": {"0"}},
+		},
+		{
+			struct {
+				V customEncodedIntPtr `url:"v,omitempty"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V customEncodedIntPtr `url:"v"`
+			}{one},
+			url.Values{"v": {"1"}},
+		},
+
+		// pointers to custom encoded types. (Values below are not necessarily desirable)
+		{
+			struct {
+				V *customEncodedIntPtr `url:"v"`
+			}{},
+			url.Values{"v": {"_0"}},
+		},
+		{
+			struct {
+				V *customEncodedIntPtr `url:"v,omitempty"`
+			}{},
+			url.Values{},
+		},
+		{
+			struct {
+				V *customEncodedIntPtr `url:"v"`
+			}{&zero},
+			url.Values{"v": {"0"}},
+		},
+		{
+			struct {
+				V *customEncodedIntPtr `url:"v,omitempty"`
+			}{&zero},
+			url.Values{"v": {"0"}},
+		},
+		{
+			struct {
+				V *customEncodedIntPtr `url:"v"`
+			}{&one},
+			url.Values{"v": {"1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
