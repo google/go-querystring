@@ -603,7 +603,7 @@ func TestValues_CustomEncodingPointer(t *testing.T) {
 			url.Values{"v": {"1"}},
 		},
 
-		// pointers to custom encoded types. (Values below are not necessarily desirable)
+		// pointers to custom encoded types.
 		{
 			struct {
 				V *customEncodedIntPtr `url:"v"`
