@@ -26,7 +26,6 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -145,11 +144,16 @@ func Values(v interface{}) (url.Values, error) {
 	return values, err
 }
 
+type embeddedStruct struct {
+	Value reflect.Value
+	Scope string
+}
+
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
 func reflectValue(values url.Values, val reflect.Value, scope string) error {
-	var embedded []reflect.Value
+	var embedded []*embeddedStruct
 
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -163,26 +167,27 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		if tag == "-" {
 			continue
 		}
-		name, opts := parseTag(tag)
 
-		if name == "" {
+		var parsedTag urlTag = parseTag(tag)
+
+		if parsedTag.name == "" {
 			if sf.Anonymous {
 				v := reflect.Indirect(sv)
 				if v.IsValid() && v.Kind() == reflect.Struct {
 					// save embedded struct for later processing
-					embedded = append(embedded, v)
+					embedded = append(embedded, &embeddedStruct{v, scope})
 					continue
 				}
 			}
 
-			name = sf.Name
+			parsedTag.name = sf.Name
 		}
 
 		if scope != "" {
-			name = scope + "[" + name + "]"
+			parsedTag.name = scope + "[" + parsedTag.name + "]"
 		}
 
-		if opts.Contains("omitempty") && isEmptyValue(sv) {
+		if parsedTag.options.Contains(tagStringOmitEmpty) && isEmptyValue(sv) {
 			continue
 		}
 
@@ -194,7 +199,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			}
 
 			m := sv.Interface().(Encoder)
-			if err := m.EncodeValues(name, &values); err != nil {
+			if err := m.EncodeValues(parsedTag.name, &values); err != nil {
 				return err
 			}
 			continue
@@ -210,14 +215,14 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
 			var del string
-			if opts.Contains("comma") {
+			if parsedTag.options.Contains(tagStringComma) {
 				del = ","
-			} else if opts.Contains("space") {
+			} else if parsedTag.options.Contains(tagStringSpace) {
 				del = " "
-			} else if opts.Contains("semicolon") {
+			} else if parsedTag.options.Contains(tagStringSemicolon) {
 				del = ";"
-			} else if opts.Contains("brackets") {
-				name = name + "[]"
+			} else if parsedTag.options.Contains(tagStringBrackets) {
+				parsedTag.name = parsedTag.name + "[]"
 			} else {
 				del = sf.Tag.Get("del")
 			}
@@ -231,38 +236,66 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					} else {
 						s.WriteString(del)
 					}
-					s.WriteString(valueString(sv.Index(i), opts, sf))
+					s.WriteString(valueString(sv.Index(i), parsedTag.options, sf))
 				}
-				values.Add(name, s.String())
+				values.Add(parsedTag.name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
-					k := name
-					if opts.Contains("numbered") {
-						k = fmt.Sprintf("%s%d", name, i)
+					tagName := parsedTag.name
+					var indexValue reflect.Value = sv.Index(i)
+
+					if parsedTag.options.Contains(tagStringNumbered) {
+						tagName = fmt.Sprintf("%s%d", parsedTag.name, i)
 					}
-					values.Add(k, valueString(sv.Index(i), opts, sf))
+
+					if parsedTag.options.Contains(tagStringIndexed) {
+						tagName = fmt.Sprintf("%s[%d]", parsedTag.name, i)
+
+						for indexValue.Kind() == reflect.Ptr {
+							if indexValue.IsNil() {
+								break
+							}
+
+							indexValue = indexValue.Elem()
+						}
+
+						if indexValue.Kind() == reflect.Struct {
+							embedded = append(embedded, &embeddedStruct{indexValue, tagName})
+							continue
+						}
+					}
+
+					values.Add(tagName, valueString(indexValue, parsedTag.options, sf))
 				}
 			}
 			continue
 		}
 
 		if sv.Type() == timeType {
-			values.Add(name, valueString(sv, opts, sf))
+			values.Add(parsedTag.name, valueString(sv, parsedTag.options, sf))
 			continue
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, name); err != nil {
+			if err := reflectValue(values, sv, parsedTag.name); err != nil {
 				return err
 			}
 			continue
 		}
 
-		values.Add(name, valueString(sv, opts, sf))
+		values.Add(parsedTag.name, valueString(sv, parsedTag.options, sf))
 	}
 
 	for _, f := range embedded {
-		if err := reflectValue(values, f, scope); err != nil {
+		var s string
+
+		if f.Scope == "" {
+			s = scope
+		} else {
+			s = f.Scope
+		}
+
+		if err := reflectValue(values, f.Value, s); err != nil {
 			return err
 		}
 	}
@@ -279,7 +312,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		v = v.Elem()
 	}
 
-	if v.Kind() == reflect.Bool && opts.Contains("int") {
+	if v.Kind() == reflect.Bool && opts.Contains(tagStringInt) {
 		if v.Bool() {
 			return "1"
 		}
@@ -288,13 +321,13 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 
 	if v.Type() == timeType {
 		t := v.Interface().(time.Time)
-		if opts.Contains("unix") {
+		if opts.Contains(tagStringUnix) {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
-		if opts.Contains("unixmilli") {
+		if opts.Contains(tagStringUnixMilli) {
 			return strconv.FormatInt((t.UnixNano() / 1e6), 10)
 		}
-		if opts.Contains("unixnano") {
+		if opts.Contains(tagStringUnixNano) {
 			return strconv.FormatInt(t.UnixNano(), 10)
 		}
 		if layout := sf.Tag.Get("layout"); layout != "" {
@@ -332,26 +365,5 @@ func isEmptyValue(v reflect.Value) bool {
 		return z.IsZero()
 	}
 
-	return false
-}
-
-// tagOptions is the string following a comma in a struct field's "url" tag, or
-// the empty string. It does not include the leading comma.
-type tagOptions []string
-
-// parseTag splits a struct field's url tag into its name and comma-separated
-// options.
-func parseTag(tag string) (string, tagOptions) {
-	s := strings.Split(tag, ",")
-	return s[0], s[1:]
-}
-
-// Contains checks whether the tagOptions contains the specified option.
-func (o tagOptions) Contains(option string) bool {
-	for _, s := range o {
-		if s == option {
-			return true
-		}
-	}
 	return false
 }

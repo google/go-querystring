@@ -15,6 +15,17 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+type GenericTest struct {
+	input interface{}
+	want  url.Values
+}
+
+func runGenericTests(t *testing.T, genericTests *[]GenericTest) {
+	for _, genericTest := range *genericTests {
+		testValue(t, genericTest.input, genericTest.want)
+	}
+}
+
 // test that Values(input) matches want.  If not, report an error on t.
 func testValue(t *testing.T, input interface{}, want url.Values) {
 	v, err := Values(input)
@@ -27,10 +38,7 @@ func testValue(t *testing.T, input interface{}, want url.Values) {
 }
 
 func TestValues_BasicTypes(t *testing.T) {
-	tests := []struct {
-		input interface{}
-		want  url.Values
-	}{
+	tests := []GenericTest{
 		// zero values
 		{struct{ V string }{}, url.Values{"V": {""}}},
 		{struct{ V int }{}, url.Values{"V": {"0"}}},
@@ -52,6 +60,7 @@ func TestValues_BasicTypes(t *testing.T) {
 			}{false},
 			url.Values{"V": {"0"}},
 		},
+
 		{
 			struct {
 				V bool `url:",int"`
@@ -92,19 +101,14 @@ func TestValues_BasicTypes(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
-	}
+	runGenericTests(t, &tests)
 }
 
 func TestValues_Pointers(t *testing.T) {
 	str := "s"
 	strPtr := &str
 
-	tests := []struct {
-		input interface{}
-		want  url.Values
-	}{
+	tests := []GenericTest{
 		// nil pointers (zero values)
 		{struct{ V *string }{}, url.Values{"V": {""}}},
 		{struct{ V *int }{}, url.Values{"V": {""}}},
@@ -128,21 +132,19 @@ func TestValues_Pointers(t *testing.T) {
 		{&struct{ V string }{"v"}, url.Values{"V": {"v"}}},
 	}
 
-	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
-	}
+	runGenericTests(t, &tests)
 }
 
+// IMPORTANT
 func TestValues_Slices(t *testing.T) {
-	tests := []struct {
-		input interface{}
-		want  url.Values
-	}{
+	// The base struct could be abstracted
+	tests := []GenericTest{
 		// slices of strings
 		{
 			struct{ V []string }{},
 			url.Values{},
 		},
+
 		{
 			struct{ V []string }{[]string{"a", "b"}},
 			url.Values{"V": {"a", "b"}},
@@ -176,6 +178,13 @@ func TestValues_Slices(t *testing.T) {
 				V []string `url:",numbered"`
 			}{[]string{"a", "b"}},
 			url.Values{"V0": {"a"}, "V1": {"b"}},
+		},
+
+		{
+			struct {
+				V []string `url:",indexed"`
+			}{[]string{"a", "b"}},
+			url.Values{"V[0]": {"a"}, "V[1]": {"b"}},
 		},
 
 		// arrays of strings
@@ -247,9 +256,7 @@ func TestValues_Slices(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
-	}
+	runGenericTests(t, &tests)
 }
 
 func TestValues_NestedTypes(t *testing.T) {
@@ -309,6 +316,97 @@ func TestValues_NestedTypes(t *testing.T) {
 	}
 }
 
+func TestValues_ArrayIndexNestedTypes(t *testing.T) {
+	type AnotherSubNested struct {
+		AnotherValue string `url:"d"`
+	}
+
+	type SubNested struct {
+		Value string             `url:"value"`
+		D     []AnotherSubNested `url:"anotherSubNested,indexed"`
+	}
+
+	type Nested struct {
+		C []SubNested `url:",indexed"`
+	}
+
+	tests := []GenericTest{
+		{
+			Nested{
+				[]SubNested{
+					{"value0", []AnotherSubNested{}},
+					{"value1", []AnotherSubNested{}},
+					{"value2", []AnotherSubNested{}},
+					{"value3", []AnotherSubNested{{"value0"}}},
+				},
+			},
+			url.Values{
+				"C[0][value]":                  {"value0"},
+				"C[1][value]":                  {"value1"},
+				"C[2][value]":                  {"value2"},
+				"C[3][value]":                  {"value3"},
+				"C[3][anotherSubNested][0][d]": {"value0"},
+			},
+		},
+		{
+			Nested{
+				[]SubNested{
+					{"value0", []AnotherSubNested{}},
+					{"value1", []AnotherSubNested{}},
+					{"value2", nil},
+					{"value3", []AnotherSubNested{{"value0"}}},
+				},
+			},
+			url.Values{
+				"C[0][value]":                  {"value0"},
+				"C[1][value]":                  {"value1"},
+				"C[2][value]":                  {"value2"},
+				"C[3][value]":                  {"value3"},
+				"C[3][anotherSubNested][0][d]": {"value0"},
+			},
+		},
+	}
+
+	runGenericTests(t, &tests)
+}
+
+/**
+ * Example taken from the author of Original Issue https://github.com/google/go-querystring/issues/8
+ */
+func TestValues_ArrayIndexNestedTypes_GithubIssue_Number_8(t *testing.T) {
+	type Nested struct {
+		A string `url:"theA,omitempty"`
+		B string `url:"theB,omitempty"`
+	}
+
+	type NestedArr []Nested
+
+	type Main struct {
+		A NestedArr `url:"arr,indexed"`
+		B Nested    `url:"nested"`
+	}
+
+	tests := []GenericTest{
+		{
+			Main{
+				NestedArr{{"aa", "bb"}, {"aaa", "bbb"}},
+				Nested{"xx", "zz"},
+			},
+
+			url.Values{
+				"arr[0][theA]": {"aa"},
+				"arr[0][theB]": {"bb"},
+				"arr[1][theA]": {"aaa"},
+				"arr[1][theB]": {"bbb"},
+				"nested[theA]": {"xx"},
+				"nested[theB]": {"zz"},
+			},
+		},
+	}
+
+	runGenericTests(t, &tests)
+}
+
 func TestValues_OmitEmpty(t *testing.T) {
 	str := ""
 
@@ -353,20 +451,25 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	type Inner struct {
 		V string
 	}
+
 	type Outer struct {
 		Inner
 	}
+
 	type OuterPtr struct {
 		*Inner
 	}
+
 	type Mixed struct {
 		Inner
 		V string
 	}
+
 	type unexported struct {
 		Inner
 		V string
 	}
+
 	type Exported struct {
 		unexported
 	}
@@ -384,7 +487,9 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 			url.Values{"V": {"a"}},
 		},
 		{
+			// This step would happen before anything else, so we need not worry about it
 			Mixed{Inner: Inner{V: "a"}, V: "b"},
+
 			url.Values{"V": {"b", "a"}},
 		},
 		{
@@ -427,10 +532,7 @@ func (m customEncodedStrings) EncodeValues(key string, v *url.Values) error {
 }
 
 func TestValues_CustomEncodingSlice(t *testing.T) {
-	tests := []struct {
-		input interface{}
-		want  url.Values
-	}{
+	tests := []GenericTest{
 		{
 			struct {
 				V customEncodedStrings `url:"v"`
@@ -459,9 +561,8 @@ func TestValues_CustomEncodingSlice(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
-	}
+	runGenericTests(t, &tests)
+
 }
 
 // One of the few ways reflectValues will return an error is if a custom
@@ -702,26 +803,6 @@ func TestIsEmptyValue(t *testing.T) {
 		want := tt.empty
 		if got != want {
 			t.Errorf("isEmptyValue(%v) returned %t; want %t", tt.value, got, want)
-		}
-	}
-}
-
-func TestParseTag(t *testing.T) {
-	name, opts := parseTag("field,foobar,foo")
-	if name != "field" {
-		t.Fatalf("name = %q, want field", name)
-	}
-	for _, tt := range []struct {
-		opt  string
-		want bool
-	}{
-		{"foobar", true},
-		{"foo", true},
-		{"bar", false},
-		{"field", false},
-	} {
-		if opts.Contains(tt.opt) != tt.want {
-			t.Errorf("Contains(%q) = %v", tt.opt, !tt.want)
 		}
 	}
 }
