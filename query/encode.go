@@ -252,14 +252,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					if parsedTag.options.Contains("indexed") {
 						tagName = fmt.Sprintf("%s[%d]", parsedTag.name, i)
 
-						for indexValue.Kind() == reflect.Ptr {
-							if indexValue.IsNil() {
-								break
-							}
-
-							indexValue = indexValue.Elem()
-						}
-
 						if indexValue.Kind() == reflect.Struct {
 							embedded = append(embedded, &embeddedStruct{indexValue, tagName})
 							continue
