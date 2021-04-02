@@ -107,6 +107,11 @@ type Encoder interface {
 // 	// separated by exclamation points "!".
 // 	Field []bool `url:",int" del:"!"`
 //
+// Including the "indexed" option for slices and arrays will encode the Slice and Array
+// values using Ruby format, and would lead to recursive serialization of all the nested struct
+// fields and slice/array within them as well (This was added in PR # 48)
+//  
+//
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
 // visibility rules.  An anonymous struct field with a name given in its URL
@@ -118,6 +123,8 @@ type Encoder interface {
 // scoping. e.g:
 //
 // 	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
+// 
+// 
 //
 // All other values are encoded using their default string representation.
 //
