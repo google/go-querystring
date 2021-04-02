@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -187,7 +188,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			parsedTag.name = scope + "[" + parsedTag.name + "]"
 		}
 
-		if parsedTag.options.Contains(tagStringOmitEmpty) && isEmptyValue(sv) {
+		if parsedTag.options.Contains("omitempty") && isEmptyValue(sv) {
 			continue
 		}
 
@@ -215,13 +216,13 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
 			var del string
-			if parsedTag.options.Contains(tagStringComma) {
+			if parsedTag.options.Contains("comma") {
 				del = ","
-			} else if parsedTag.options.Contains(tagStringSpace) {
+			} else if parsedTag.options.Contains("space") {
 				del = " "
-			} else if parsedTag.options.Contains(tagStringSemicolon) {
+			} else if parsedTag.options.Contains("semicolon") {
 				del = ";"
-			} else if parsedTag.options.Contains(tagStringBrackets) {
+			} else if parsedTag.options.Contains("brackets") {
 				parsedTag.name = parsedTag.name + "[]"
 			} else {
 				del = sf.Tag.Get("del")
@@ -244,11 +245,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					tagName := parsedTag.name
 					var indexValue reflect.Value = sv.Index(i)
 
-					if parsedTag.options.Contains(tagStringNumbered) {
+					if parsedTag.options.Contains("numbered") {
 						tagName = fmt.Sprintf("%s%d", parsedTag.name, i)
 					}
 
-					if parsedTag.options.Contains(tagStringIndexed) {
+					if parsedTag.options.Contains("indexed") {
 						tagName = fmt.Sprintf("%s[%d]", parsedTag.name, i)
 
 						for indexValue.Kind() == reflect.Ptr {
@@ -312,7 +313,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		v = v.Elem()
 	}
 
-	if v.Kind() == reflect.Bool && opts.Contains(tagStringInt) {
+	if v.Kind() == reflect.Bool && opts.Contains("int") {
 		if v.Bool() {
 			return "1"
 		}
@@ -321,13 +322,13 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 
 	if v.Type() == timeType {
 		t := v.Interface().(time.Time)
-		if opts.Contains(tagStringUnix) {
+		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
-		if opts.Contains(tagStringUnixMilli) {
+		if opts.Contains("unixmilli") {
 			return strconv.FormatInt((t.UnixNano() / 1e6), 10)
 		}
-		if opts.Contains(tagStringUnixNano) {
+		if opts.Contains("unixnano") {
 			return strconv.FormatInt(t.UnixNano(), 10)
 		}
 		if layout := sf.Tag.Get("layout"); layout != "" {
@@ -366,4 +367,28 @@ func isEmptyValue(v reflect.Value) bool {
 	}
 
 	return false
+}
+
+type urlTag struct {
+	name    string
+	options tagOptions
+}
+
+type tagOptions []string
+
+// Contains checks whether the tagOptions contains the specified option.
+func (o tagOptions) Contains(option string) bool {
+	for _, s := range o {
+		if s == option {
+			return true
+		}
+	}
+	return false
+}
+
+// parseTag splits a struct field's url tag into its name and comma-separated
+// options.
+func parseTag(tag string) urlTag {
+	s := strings.Split(tag, ",")
+	return urlTag{s[0], s[1:]}
 }

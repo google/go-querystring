@@ -15,17 +15,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-type GenericTest struct {
-	input interface{}
-	want  url.Values
-}
-
-func runGenericTests(t *testing.T, genericTests *[]GenericTest) {
-	for _, genericTest := range *genericTests {
-		testValue(t, genericTest.input, genericTest.want)
-	}
-}
-
 // test that Values(input) matches want.  If not, report an error on t.
 func testValue(t *testing.T, input interface{}, want url.Values) {
 	v, err := Values(input)
@@ -38,7 +27,10 @@ func testValue(t *testing.T, input interface{}, want url.Values) {
 }
 
 func TestValues_BasicTypes(t *testing.T) {
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		// zero values
 		{struct{ V string }{}, url.Values{"V": {""}}},
 		{struct{ V int }{}, url.Values{"V": {"0"}}},
@@ -101,14 +93,19 @@ func TestValues_BasicTypes(t *testing.T) {
 		},
 	}
 
-	runGenericTests(t, &tests)
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 func TestValues_Pointers(t *testing.T) {
 	str := "s"
 	strPtr := &str
 
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		// nil pointers (zero values)
 		{struct{ V *string }{}, url.Values{"V": {""}}},
 		{struct{ V *int }{}, url.Values{"V": {""}}},
@@ -132,13 +129,18 @@ func TestValues_Pointers(t *testing.T) {
 		{&struct{ V string }{"v"}, url.Values{"V": {"v"}}},
 	}
 
-	runGenericTests(t, &tests)
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 // IMPORTANT
 func TestValues_Slices(t *testing.T) {
 	// The base struct could be abstracted
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		// slices of strings
 		{
 			struct{ V []string }{},
@@ -256,7 +258,9 @@ func TestValues_Slices(t *testing.T) {
 		},
 	}
 
-	runGenericTests(t, &tests)
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 func TestValues_NestedTypes(t *testing.T) {
@@ -330,7 +334,10 @@ func TestValues_ArrayIndexNestedTypes(t *testing.T) {
 		C []SubNested `url:",indexed"`
 	}
 
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		{
 			Nested{
 				[]SubNested{
@@ -367,7 +374,9 @@ func TestValues_ArrayIndexNestedTypes(t *testing.T) {
 		},
 	}
 
-	runGenericTests(t, &tests)
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 /**
@@ -386,7 +395,10 @@ func TestValues_ArrayIndexNestedTypes_GithubIssue_Number_8(t *testing.T) {
 		B Nested    `url:"nested"`
 	}
 
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		{
 			Main{
 				NestedArr{{"aa", "bb"}, {"aaa", "bbb"}},
@@ -404,7 +416,9 @@ func TestValues_ArrayIndexNestedTypes_GithubIssue_Number_8(t *testing.T) {
 		},
 	}
 
-	runGenericTests(t, &tests)
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 func TestValues_OmitEmpty(t *testing.T) {
@@ -532,7 +546,10 @@ func (m customEncodedStrings) EncodeValues(key string, v *url.Values) error {
 }
 
 func TestValues_CustomEncodingSlice(t *testing.T) {
-	tests := []GenericTest{
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
 		{
 			struct {
 				V customEncodedStrings `url:"v"`
@@ -561,8 +578,9 @@ func TestValues_CustomEncodingSlice(t *testing.T) {
 		},
 	}
 
-	runGenericTests(t, &tests)
-
+	for _, test := range tests {
+		testValue(t, test.input, test.want)
+	}
 }
 
 // One of the few ways reflectValues will return an error is if a custom
@@ -803,6 +821,27 @@ func TestIsEmptyValue(t *testing.T) {
 		want := tt.empty
 		if got != want {
 			t.Errorf("isEmptyValue(%v) returned %t; want %t", tt.value, got, want)
+		}
+	}
+}
+
+func TestParseTag(t *testing.T) {
+	parsedTag := parseTag("field,foobar,foo")
+	if parsedTag.name != "field" {
+
+		t.Fatalf("name = %q, want field", parsedTag.name)
+	}
+	for _, tt := range []struct {
+		opt  string
+		want bool
+	}{
+		{"foobar", true},
+		{"foo", true},
+		{"bar", false},
+		{"field", false},
+	} {
+		if parsedTag.options.Contains(tt.opt) != tt.want {
+			t.Errorf("Contains(%q) = %v", tt.opt, !tt.want)
 		}
 	}
 }
