@@ -828,7 +828,6 @@ func TestIsEmptyValue(t *testing.T) {
 func TestParseTag(t *testing.T) {
 	parsedTag := parseTag("field,foobar,foo")
 	if parsedTag.name != "field" {
-
 		t.Fatalf("name = %q, want field", parsedTag.name)
 	}
 	for _, tt := range []struct {
