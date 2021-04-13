@@ -52,7 +52,6 @@ func TestValues_BasicTypes(t *testing.T) {
 			}{false},
 			url.Values{"V": {"0"}},
 		},
-
 		{
 			struct {
 				V bool `url:",int"`
@@ -134,9 +133,7 @@ func TestValues_Pointers(t *testing.T) {
 	}
 }
 
-// IMPORTANT
 func TestValues_Slices(t *testing.T) {
-	// The base struct could be abstracted
 	tests := []struct {
 		input interface{}
 		want  url.Values
@@ -146,7 +143,6 @@ func TestValues_Slices(t *testing.T) {
 			struct{ V []string }{},
 			url.Values{},
 		},
-
 		{
 			struct{ V []string }{[]string{"a", "b"}},
 			url.Values{"V": {"a", "b"}},
@@ -465,25 +461,20 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	type Inner struct {
 		V string
 	}
-
 	type Outer struct {
 		Inner
 	}
-
 	type OuterPtr struct {
 		*Inner
 	}
-
 	type Mixed struct {
 		Inner
 		V string
 	}
-
 	type unexported struct {
 		Inner
 		V string
 	}
-
 	type Exported struct {
 		unexported
 	}
@@ -503,7 +494,6 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 		{
 			// This step would happen before anything else, so we need not worry about it
 			Mixed{Inner: Inner{V: "a"}, V: "b"},
-
 			url.Values{"V": {"b", "a"}},
 		},
 		{

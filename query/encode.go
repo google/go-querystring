@@ -111,7 +111,6 @@ type Encoder interface {
 // values using Ruby format, and would lead to recursive serialization of all the nested struct
 // fields and slice/array within that struct as well (This was added in PR # 48)
 //
-//
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
 // visibility rules.  An anonymous struct field with a name given in its URL
@@ -123,8 +122,6 @@ type Encoder interface {
 // scoping. e.g:
 //
 // 	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
-//
-//
 //
 // All other values are encoded using their default string representation.
 //
@@ -165,7 +162,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	var scopes map[*reflect.Value]string
 
 	typ := val.Type()
-
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
 		if sf.PkgPath != "" && !sf.Anonymous { // unexported
@@ -177,7 +173,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		if tag == "-" {
 			continue
 		}
-
 		name, opts := parseTag(tag)
 
 		if name == "" {
@@ -346,7 +341,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 }
 
 // isEmptyValue checks if a value should be considered empty for the purposes
-// of omit	ting fields with the "omitempty" option.
+// of omitting fields with the "omitempty" option.
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
