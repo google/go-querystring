@@ -93,8 +93,8 @@ func TestValues_BasicTypes(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -129,8 +129,8 @@ func TestValues_Pointers(t *testing.T) {
 		{&struct{ V string }{"v"}, url.Values{"V": {"v"}}},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -258,8 +258,8 @@ func TestValues_Slices(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -374,8 +374,8 @@ func TestValues_ArrayIndexNestedTypes(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -416,8 +416,8 @@ func TestValues_ArrayIndexNestedTypes_GithubIssue_Number_8(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -578,8 +578,8 @@ func TestValues_CustomEncodingSlice(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		testValue(t, test.input, test.want)
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
 	}
 }
 
@@ -826,9 +826,9 @@ func TestIsEmptyValue(t *testing.T) {
 }
 
 func TestParseTag(t *testing.T) {
-	parsedTag := parseTag("field,foobar,foo")
-	if parsedTag.name != "field" {
-		t.Fatalf("name = %q, want field", parsedTag.name)
+	name, opts := parseTag("field,foobar,foo")
+	if name != "field" {
+		t.Fatalf("name = %q, want field", name)
 	}
 	for _, tt := range []struct {
 		opt  string
@@ -839,7 +839,7 @@ func TestParseTag(t *testing.T) {
 		{"bar", false},
 		{"field", false},
 	} {
-		if parsedTag.options.Contains(tt.opt) != tt.want {
+		if opts.Contains(tt.opt) != tt.want {
 			t.Errorf("Contains(%q) = %v", tt.opt, !tt.want)
 		}
 	}

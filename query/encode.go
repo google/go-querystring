@@ -109,7 +109,7 @@ type Encoder interface {
 //
 // Including the "indexed" option for slices and arrays will encode the Slice and Array
 // values using Ruby format, and would lead to recursive serialization of all the nested struct
-// fields and slice/array within them as well (This was added in PR # 48)
+// fields and slice/array within that struct as well (This was added in PR # 48)
 //
 //
 // Anonymous struct fields are usually encoded as if their inner exported
@@ -152,18 +152,20 @@ func Values(v interface{}) (url.Values, error) {
 	return values, err
 }
 
-type embeddedStruct struct {
-	Value reflect.Value
-	Scope string
-}
-
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
 func reflectValue(values url.Values, val reflect.Value, scope string) error {
-	var embedded []*embeddedStruct
+	var embedded []*reflect.Value
+
+	/**
+	 * Provide scopes for embedded values, helpful for the indexed option as the scope argument of this function is used there to
+	 * ensure correct property names for properties of the nested structs
+	 */
+	var scopes map[*reflect.Value]string
 
 	typ := val.Type()
+
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
 		if sf.PkgPath != "" && !sf.Anonymous { // unexported
@@ -176,26 +178,26 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
-		var parsedTag urlTag = parseTag(tag)
+		name, opts := parseTag(tag)
 
-		if parsedTag.name == "" {
+		if name == "" {
 			if sf.Anonymous {
 				v := reflect.Indirect(sv)
 				if v.IsValid() && v.Kind() == reflect.Struct {
 					// save embedded struct for later processing
-					embedded = append(embedded, &embeddedStruct{v, scope})
+					embedded = append(embedded, &v)
 					continue
 				}
 			}
 
-			parsedTag.name = sf.Name
+			name = sf.Name
 		}
 
 		if scope != "" {
-			parsedTag.name = scope + "[" + parsedTag.name + "]"
+			name = scope + "[" + name + "]"
 		}
 
-		if parsedTag.options.Contains("omitempty") && isEmptyValue(sv) {
+		if opts.Contains("omitempty") && isEmptyValue(sv) {
 			continue
 		}
 
@@ -207,7 +209,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			}
 
 			m := sv.Interface().(Encoder)
-			if err := m.EncodeValues(parsedTag.name, &values); err != nil {
+			if err := m.EncodeValues(name, &values); err != nil {
 				return err
 			}
 			continue
@@ -223,14 +225,14 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
 			var del string
-			if parsedTag.options.Contains("comma") {
+			if opts.Contains("comma") {
 				del = ","
-			} else if parsedTag.options.Contains("space") {
+			} else if opts.Contains("space") {
 				del = " "
-			} else if parsedTag.options.Contains("semicolon") {
+			} else if opts.Contains("semicolon") {
 				del = ";"
-			} else if parsedTag.options.Contains("brackets") {
-				parsedTag.name = parsedTag.name + "[]"
+			} else if opts.Contains("brackets") {
+				name = name + "[]"
 			} else {
 				del = sf.Tag.Get("del")
 			}
@@ -244,58 +246,62 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					} else {
 						s.WriteString(del)
 					}
-					s.WriteString(valueString(sv.Index(i), parsedTag.options, sf))
+					s.WriteString(valueString(sv.Index(i), opts, sf))
 				}
-				values.Add(parsedTag.name, s.String())
+				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
-					tagName := parsedTag.name
+					tagName := name
 					var indexValue reflect.Value = sv.Index(i)
 
-					if parsedTag.options.Contains("numbered") {
-						tagName = fmt.Sprintf("%s%d", parsedTag.name, i)
+					if opts.Contains("numbered") {
+						tagName = fmt.Sprintf("%s%d", name, i)
 					}
 
-					if parsedTag.options.Contains("indexed") {
-						tagName = fmt.Sprintf("%s[%d]", parsedTag.name, i)
+					if opts.Contains("indexed") {
+						if scopes == nil {
+							scopes = make(map[*reflect.Value]string)
+						}
+
+						tagName = fmt.Sprintf("%s[%d]", name, i)
 
 						if indexValue.Kind() == reflect.Struct {
-							embedded = append(embedded, &embeddedStruct{indexValue, tagName})
+							embedded = append(embedded, &indexValue)
+							scopes[&indexValue] = tagName
 							continue
 						}
 					}
 
-					values.Add(tagName, valueString(indexValue, parsedTag.options, sf))
+					values.Add(tagName, valueString(indexValue, opts, sf))
 				}
 			}
 			continue
 		}
 
 		if sv.Type() == timeType {
-			values.Add(parsedTag.name, valueString(sv, parsedTag.options, sf))
+			values.Add(name, valueString(sv, opts, sf))
 			continue
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, parsedTag.name); err != nil {
+			if err := reflectValue(values, sv, name); err != nil {
 				return err
 			}
 			continue
 		}
 
-		values.Add(parsedTag.name, valueString(sv, parsedTag.options, sf))
+		values.Add(name, valueString(sv, opts, sf))
 	}
 
-	for _, f := range embedded {
-		var s string
+	for _, val := range embedded {
+		var s string = scope
+		valueScope, ok := scopes[val]
 
-		if f.Scope == "" {
-			s = scope
-		} else {
-			s = f.Scope
+		if ok {
+			s = valueScope
 		}
 
-		if err := reflectValue(values, f.Value, s); err != nil {
+		if err := reflectValue(values, *val, s); err != nil {
 			return err
 		}
 	}
@@ -340,7 +346,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 }
 
 // isEmptyValue checks if a value should be considered empty for the purposes
-// of omitting fields with the "omitempty" option.
+// of omit	ting fields with the "omitempty" option.
 func isEmptyValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
@@ -368,11 +374,8 @@ func isEmptyValue(v reflect.Value) bool {
 	return false
 }
 
-type urlTag struct {
-	name    string
-	options tagOptions
-}
-
+// tagOptions is the string following a comma in a struct field's "url" tag, or
+// the empty string. It does not include the leading comma.
 type tagOptions []string
 
 // Contains checks whether the tagOptions contains the specified option.
@@ -387,7 +390,7 @@ func (o tagOptions) Contains(option string) bool {
 
 // parseTag splits a struct field's url tag into its name and comma-separated
 // options.
-func parseTag(tag string) urlTag {
+func parseTag(tag string) (string, tagOptions) {
 	s := strings.Split(tag, ",")
-	return urlTag{s[0], s[1:]}
+	return s[0], s[1:]
 }
