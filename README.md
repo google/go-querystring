@@ -24,6 +24,8 @@ type Options struct {
   Query   string `url:"q"`
   ShowAll bool   `url:"all"`
   Page    int    `url:"page"`
+  HideIfEmpty int `url:"hide_if_empty";omitempty` //this field will hide will if have 0 value 
+  List []int `url:"list";comma` //items in this slice will join by comma char
 }
 
 opt := Options{ "foo", true, 2 }
