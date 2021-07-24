@@ -119,6 +119,14 @@ type Encoder interface {
 //
 // 	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
 //
+// Structs can be encoded as JSON by including the "json" option in that fields
+// tag. The entire struct is then passed to encoding/json.Marshal where those
+// tag signatures apply.
+//
+//  // Encoding a struct as JSON
+//  Field A `url: "myName,json"`
+//  // Result: myName={"someField": "cat", "numField": 1}
+//
 // All other values are encoded using their default string representation.
 //
 // Multiple fields that encode to the same URL parameter name will be included
@@ -252,8 +260,17 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, name); err != nil {
-				return err
+			if opts.Contains("json") {
+				var b []byte
+				if b, err := json.Marshall(sv); err != nil {
+					return err
+				}
+
+				values.Add(name, valueString(string(b), opts, sf))
+			} else {
+				if err := reflectValue(values, sv, name); err != nil {
+					return err
+				}
 			}
 			continue
 		}
