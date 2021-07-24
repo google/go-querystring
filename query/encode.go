@@ -22,6 +22,7 @@ package query
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -262,7 +263,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		if sv.Kind() == reflect.Struct {
 			if opts.Contains("json") {
 				var b []byte
-				if b, err := json.Marshall(sv); err != nil {
+				if b, err := json.Marshal(sv); err != nil {
 					return err
 				}
 
