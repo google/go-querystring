@@ -441,6 +441,28 @@ func TestValues_StructsAsJSON(t *testing.T) {
 			},
 		},
 		{
+			Outer{
+				P: &Inner{
+					A: "def",
+					B: 22,
+					T: Nested{
+						L: true,
+						M: true,
+					},
+				},
+			},
+			url.Values{
+				"str": {`{"a":"","b":0,"t":{"l":false,"m":false}}`},
+				"ptr": {`{"a":"def","b":22,"t":{"l":true,"m":true}}`},
+			},
+		},
+		{
+			Outer{},
+			url.Values{
+				"str": {`{"a":"","b":0,"t":{"l":false,"m":false}}`},
+			},
+		},
+		{
 			nil,
 			url.Values{},
 		},
