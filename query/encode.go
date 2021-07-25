@@ -263,11 +263,12 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		if sv.Kind() == reflect.Struct {
 			if opts.Contains("json") {
 				var b []byte
-				if b, err := json.Marshal(sv); err != nil {
+				b, err := json.Marshal(sv.Interface())
+				if err != nil {
 					return err
 				}
 
-				values.Add(name, valueString(string(b), opts, sf))
+				values.Add(name, valueString(reflect.ValueOf(string(b)), opts, sf))
 			} else {
 				if err := reflectValue(values, sv, name); err != nil {
 					return err
