@@ -404,19 +404,19 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}
 }
 
-
 func TestValues_StructsAsJSON(t *testing.T) {
+	type Nested struct {
+		L bool `json:"l"`
+		M bool `json:"m"`
+	}
 	type Inner struct {
 		A string `json:"a"`
-		B int `json:"b"`
-		T struct {
-			L bool `json:"l"`
-			M bool `json:"m"`
-		} `json:"t"`
+		B int    `json:"b"`
+		T Nested `json:"t"`
 	}
 
 	type Outer struct {
-		S Inner `url:"str,json"`
+		S Inner  `url:"str,json"`
 		P *Inner `url:"ptr,json,omitempty"`
 	}
 
@@ -425,20 +425,19 @@ func TestValues_StructsAsJSON(t *testing.T) {
 		want  url.Values
 	}{
 		{
-			Outer {
-				S: Inner {
+			Outer{
+				S: Inner{
 					A: "abc",
 					B: 5,
-					T: struct {
-						L bool `json:"l"`
-						M bool `json:"m"`
-					} `json:"t"`,
+					T: Nested{
+						L: true,
+						M: false,
+					},
 				},
 				P: nil,
 			},
 			url.Values{
-				"str": {"{\"a\": \"abc\", \"b\": 5, \"t\": {\"l\": false, \"m\": false}}"},
-				"ptr": {""},
+				"str": {`{"a":"abc","b":5,"t":{"l":true,"m":false}}`},
 			},
 		},
 		{
