@@ -114,8 +114,8 @@ type Encoder interface {
 //
 // Non-nil pointer values are encoded as the value pointed to.
 //
-// Nested structs are encoded including parent fields in value names for
-// scoping. e.g:
+// Nested structs have their fields processed recursively and are encoded
+// including parent fields in value names for scoping. For example,
 //
 // 	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
 //
