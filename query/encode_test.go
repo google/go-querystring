@@ -144,8 +144,28 @@ func TestValues_Slices(t *testing.T) {
 			url.Values{},
 		},
 		{
+			struct{ V []string }{[]string{}},
+			url.Values{},
+		},
+		{
+			struct{ V []string }{[]string{""}},
+			url.Values{"V": {""}},
+		},
+		{
 			struct{ V []string }{[]string{"a", "b"}},
 			url.Values{"V": {"a", "b"}},
+		},
+		{
+			struct {
+				V []string `url:",comma"`
+			}{[]string{}},
+			url.Values{},
+		},
+		{
+			struct {
+				V []string `url:",comma"`
+			}{[]string{""}},
+			url.Values{"V": {""}},
 		},
 		{
 			struct {

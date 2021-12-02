@@ -209,6 +209,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
+			if sv.Len() == 0 {
+				// skip if slice or array is empty
+				continue
+			}
+
 			var del string
 			if opts.Contains("comma") {
 				del = ","
