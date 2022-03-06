@@ -45,3 +45,4 @@ you might consider one of these alternatives:
  - https://github.com/gorilla/schema
  - https://github.com/pasztorpisti/qs
  - https://github.com/hetiansu5/urlquery
+ - https://github.com/ggicci/httpin (decoder only)
