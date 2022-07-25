@@ -291,8 +291,14 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		return "0"
 	}
 
-	if v.Type() == timeType {
-		t := v.Interface().(time.Time)
+	isTimePointer := (v.Kind() == reflect.Pointer && !v.IsNil() && v.Elem().Type() == timeType)
+	if v.Type() == timeType || isTimePointer {
+		var t time.Time
+		if isTimePointer {
+			t = *v.Interface().(*time.Time)
+		} else {
+			t = v.Interface().(time.Time)
+		}
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
