@@ -237,7 +237,12 @@ func TestValues_Slices(t *testing.T) {
 			}{[2]string{"a", "b"}},
 			url.Values{"V0": {"a"}, "V1": {"b"}},
 		},
-
+		{
+			struct {
+				V [2]string `url:",spotnumbered"`
+			}{[2]string{"a", "b"}},
+			url.Values{"V.0": {"a"}, "V.1": {"b"}},
+		},
 		// custom delimiters
 		{
 			struct {
