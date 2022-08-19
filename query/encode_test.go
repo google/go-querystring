@@ -241,7 +241,7 @@ func TestValues_Slices(t *testing.T) {
 			struct {
 				V [2]string `url:",spotnumbered"`
 			}{[2]string{"a", "b"}},
-			url.Values{"V.0": {"a"}, "V.1": {"b"}},
+			url.Values{"V.1": {"a"}, "V.2": {"b"}},
 		},
 		// custom delimiters
 		{
