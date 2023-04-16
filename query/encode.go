@@ -251,7 +251,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
-		if sv.Type() == timeType {
+		if sv.CanConvert(timeType) {
 			values.Add(name, valueString(sv, opts, sf))
 			continue
 		}
@@ -291,8 +291,8 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		return "0"
 	}
 
-	if v.Type() == timeType {
-		t := v.Interface().(time.Time)
+	if v.CanConvert(timeType) {
+		t := v.Convert(timeType)
 		if opts.Contains("unix") {
 			return strconv.FormatInt(t.Unix(), 10)
 		}
@@ -330,7 +330,8 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.IsNil()
 	}
 
-	if t, ok := v.Interface().(time.Time); ok {
+	if v.CanConvert(timeType) {
+		t := v.Convert(timeType)
 		return t.Equal(unixZero) || t.IsZero()
 	}
 
