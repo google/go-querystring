@@ -311,6 +311,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 	return fmt.Sprint(v.Interface())
 }
 
+var unixZero = time.Unix(0, 0)
 // isEmptyValue checks if a value should be considered empty for the purposes
 // of omitting fields with the "omitempty" option.
 func isEmptyValue(v reflect.Value) bool {
@@ -327,6 +328,10 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Float() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
+	}
+
+	if t, ok := v.Interface().(time.Time); ok {
+		return t.Equal(unixZero)
 	}
 
 	type zeroable interface {
