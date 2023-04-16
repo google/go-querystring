@@ -331,7 +331,7 @@ func isEmptyValue(v reflect.Value) bool {
 	}
 
 	if t, ok := v.Interface().(time.Time); ok {
-		return t.Equal(unixZero)
+		return t.Equal(unixZero) || t.IsZero()
 	}
 
 	type zeroable interface {
