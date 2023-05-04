@@ -1,3 +1,5 @@
+name: tests
+
 on:
   push:
     branches:
@@ -6,43 +8,32 @@ on:
     branches:
       - master
 
-name: tests
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
 
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.x, 1.15.x]
+        go-version: [stable, oldstable]
         platform: [ubuntu-latest]
         include:
           # only update test coverage stats with most recent go version on linux
-          - go-version: 1.x
+          - go-version: stable
             platform: ubuntu-latest
             update-coverage: true
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - name: Cancel previous workflow runs
-      uses: styfle/cancel-workflow-action@a40b8845c0683271d9f53dfcb887a7e181d3918b #0.9.1
-      with:
-        access_token: ${{ github.token }}
-
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - run: go version
-
-    - name: Cache go modules
-      uses: actions/cache@v2
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: ${{ runner.os }}-go-
 
     - name: Run go test
       run: go test -v -race -coverprofile coverage.txt -covermode atomic ./...
 
     - name: Upload coverage to Codecov
       if: ${{ matrix.update-coverage }}
-      uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b #v2.1.0
+      uses: codecov/codecov-action@894ff025c7b54547a9a2a1e9f228beae737ad3c2 #v3.1.3
