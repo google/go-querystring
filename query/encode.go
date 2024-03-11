@@ -22,6 +22,7 @@ package query
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -118,6 +119,14 @@ type Encoder interface {
 // including parent fields in value names for scoping. For example,
 //
 //	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
+//
+// Structs can be encoded as JSON by including the "json" option in that fields
+// tag. The entire struct is then passed to encoding/json.Marshal where those
+// tag signatures apply.
+//
+//  // Encoding a struct as JSON
+//  Field A `url: "myName,json"`
+//  // Result: myName={"someField": "cat", "numField": 1}
 //
 // All other values are encoded using their default string representation.
 //
@@ -257,8 +266,18 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, name); err != nil {
-				return err
+			if opts.Contains("json") {
+				var b []byte
+				b, err := json.Marshal(sv.Interface())
+				if err != nil {
+					return err
+				}
+
+				values.Add(name, valueString(reflect.ValueOf(string(b)), opts, sf))
+			} else {
+				if err := reflectValue(values, sv, name); err != nil {
+					return err
+				}
 			}
 			continue
 		}
