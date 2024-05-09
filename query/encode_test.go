@@ -424,6 +424,75 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}
 }
 
+func TestValues_StructsAsJSON(t *testing.T) {
+	type Nested struct {
+		L bool `json:"l"`
+		M bool `json:"m"`
+	}
+	type Inner struct {
+		A string `json:"a"`
+		B int    `json:"b"`
+		T Nested `json:"t"`
+	}
+
+	type Outer struct {
+		S Inner  `url:"str,json"`
+		P *Inner `url:"ptr,json,omitempty"`
+	}
+
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			Outer{
+				S: Inner{
+					A: "abc",
+					B: 5,
+					T: Nested{
+						L: true,
+						M: false,
+					},
+				},
+				P: nil,
+			},
+			url.Values{
+				"str": {`{"a":"abc","b":5,"t":{"l":true,"m":false}}`},
+			},
+		},
+		{
+			Outer{
+				P: &Inner{
+					A: "def",
+					B: 22,
+					T: Nested{
+						L: true,
+						M: true,
+					},
+				},
+			},
+			url.Values{
+				"str": {`{"a":"","b":0,"t":{"l":false,"m":false}}`},
+				"ptr": {`{"a":"def","b":22,"t":{"l":true,"m":true}}`},
+			},
+		},
+		{
+			Outer{},
+			url.Values{
+				"str": {`{"a":"","b":0,"t":{"l":false,"m":false}}`},
+			},
+		},
+		{
+			nil,
+			url.Values{},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
 func TestValues_InvalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
