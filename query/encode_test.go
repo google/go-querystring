@@ -747,11 +747,11 @@ func TestParseTag(t *testing.T) {
 }
 
 type customStructString struct {
-	V string
+	inner string
 }
 
 func (s customStructString) String() string {
-	return s.V
+	return s.inner
 }
 
 func TestValues_CustomStructStringValue(t *testing.T) {
@@ -769,7 +769,7 @@ func TestValues_CustomStructStringValue(t *testing.T) {
 			struct {
 				V customStructString `url:"v"`
 			}{},
-			url.Values{"v[V]": {""}},
+			url.Values{},
 		},
 	}
 
