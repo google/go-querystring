@@ -256,7 +256,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
-		if sv.Kind() == reflect.Struct {
+		if sv.Kind() == reflect.Struct && !opts.Contains("string") {
 			if err := reflectValue(values, sv, name); err != nil {
 				return err
 			}
