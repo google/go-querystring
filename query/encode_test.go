@@ -747,11 +747,11 @@ func TestParseTag(t *testing.T) {
 }
 
 type customStructString struct {
-	inner string
+	v string
 }
 
 func (s customStructString) String() string {
-	return s.inner
+	return s.v
 }
 
 func TestValues_CustomStructStringValue(t *testing.T) {
