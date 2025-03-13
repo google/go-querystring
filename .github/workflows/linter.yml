@@ -12,6 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
+      uses: golangci/golangci-lint-action@4696ba8babb6127d732c3c6dde519db15edab9ea # v6.5.1
       with:
         version: v1.52.2
