@@ -125,16 +125,17 @@ type Encoder interface {
 // as multiple URL values of the same name.
 func Values(v interface{}) (url.Values, error) {
 	values := make(url.Values)
+
+	if v == nil {
+		return values, nil
+	}
+
 	val := reflect.ValueOf(v)
 	for val.Kind() == reflect.Ptr {
 		if val.IsNil() {
 			return values, nil
 		}
 		val = val.Elem()
-	}
-
-	if v == nil {
-		return values, nil
 	}
 
 	if val.Kind() != reflect.Struct {
