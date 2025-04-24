@@ -21,7 +21,6 @@
 package query
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -229,7 +228,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			}
 
 			if del != "" {
-				s := new(bytes.Buffer)
+				s := new(strings.Builder)
 				first := true
 				for i := 0; i < sv.Len(); i++ {
 					if first {
