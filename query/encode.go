@@ -106,6 +106,10 @@ type Encoder interface {
 //	// separated by exclamation points "!".
 //	Field []bool `url:",int" del:"!"`
 //
+// Including the "indexed" option for slices and arrays will encode the Slice and Array
+// values using Ruby format, and would lead to recursive serialization of all the nested struct
+// fields and slice/array within that struct as well (This was added in PR # 48)
+//
 // Anonymous struct fields are usually encoded as if their inner exported
 // fields were fields in the outer struct, subject to the standard Go
 // visibility rules.  An anonymous struct field with a name given in its URL
@@ -149,7 +153,13 @@ func Values(v interface{}) (url.Values, error) {
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
 func reflectValue(values url.Values, val reflect.Value, scope string) error {
-	var embedded []reflect.Value
+	var embedded []*reflect.Value
+
+	/**
+	 * Provide scopes for embedded values, helpful for the indexed option as the scope argument of this function is used there to
+	 * ensure correct property names for properties of the nested structs
+	 */
+	var scopes map[*reflect.Value]string
 
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
@@ -170,7 +180,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				v := reflect.Indirect(sv)
 				if v.IsValid() && v.Kind() == reflect.Struct {
 					// save embedded struct for later processing
-					embedded = append(embedded, v)
+					embedded = append(embedded, &v)
 					continue
 				}
 			}
@@ -241,11 +251,28 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
-					k := name
+					tagName := name
+					var indexValue reflect.Value = sv.Index(i)
+
 					if opts.Contains("numbered") {
-						k = fmt.Sprintf("%s%d", name, i)
+						tagName = fmt.Sprintf("%s%d", name, i)
 					}
-					values.Add(k, valueString(sv.Index(i), opts, sf))
+
+					if opts.Contains("indexed") {
+						if scopes == nil {
+							scopes = make(map[*reflect.Value]string)
+						}
+
+						tagName = fmt.Sprintf("%s[%d]", name, i)
+
+						if indexValue.Kind() == reflect.Struct {
+							embedded = append(embedded, &indexValue)
+							scopes[&indexValue] = tagName
+							continue
+						}
+					}
+
+					values.Add(tagName, valueString(indexValue, opts, sf))
 				}
 			}
 			continue
@@ -266,8 +293,15 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		values.Add(name, valueString(sv, opts, sf))
 	}
 
-	for _, f := range embedded {
-		if err := reflectValue(values, f, scope); err != nil {
+	for _, val := range embedded {
+		var s string = scope
+		valueScope, ok := scopes[val]
+
+		if ok {
+			s = valueScope
+		}
+
+		if err := reflectValue(values, *val, s); err != nil {
 			return err
 		}
 	}
@@ -344,13 +378,6 @@ func isEmptyValue(v reflect.Value) bool {
 // the empty string. It does not include the leading comma.
 type tagOptions []string
 
-// parseTag splits a struct field's url tag into its name and comma-separated
-// options.
-func parseTag(tag string) (string, tagOptions) {
-	s := strings.Split(tag, ",")
-	return s[0], s[1:]
-}
-
 // Contains checks whether the tagOptions contains the specified option.
 func (o tagOptions) Contains(option string) bool {
 	for _, s := range o {
@@ -359,4 +386,11 @@ func (o tagOptions) Contains(option string) bool {
 		}
 	}
 	return false
+}
+
+// parseTag splits a struct field's url tag into its name and comma-separated
+// options.
+func parseTag(tag string) (string, tagOptions) {
+	s := strings.Split(tag, ",")
+	return s[0], s[1:]
 }
