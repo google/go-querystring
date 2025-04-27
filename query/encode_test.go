@@ -16,8 +16,8 @@ import (
 )
 
 // test that Values(input) matches want.  If not, report an error on t.
-func testValue(t *testing.T, input interface{}, want url.Values) {
-	v, err := Values(input)
+func testValue(t *testing.T, userTag string, input interface{}, want url.Values) {
+	v, err := Values(userTag, input)
 	if err != nil {
 		t.Errorf("Values(%q) returned error: %v", input, err)
 	}
@@ -28,31 +28,34 @@ func testValue(t *testing.T, input interface{}, want url.Values) {
 
 func TestValues_BasicTypes(t *testing.T) {
 	tests := []struct {
+		myTag string
 		input interface{}
 		want  url.Values
 	}{
 		// zero values
-		{struct{ V string }{}, url.Values{"V": {""}}},
-		{struct{ V int }{}, url.Values{"V": {"0"}}},
-		{struct{ V uint }{}, url.Values{"V": {"0"}}},
-		{struct{ V float32 }{}, url.Values{"V": {"0"}}},
-		{struct{ V bool }{}, url.Values{"V": {"false"}}},
+		{"userTag", struct{ V string }{}, url.Values{"V": {""}}},
+		{"userTag", struct{ V int }{}, url.Values{"V": {"0"}}},
+		{"userTag", struct{ V uint }{}, url.Values{"V": {"0"}}},
+		{"userTag", struct{ V float32 }{}, url.Values{"V": {"0"}}},
+		{"userTag", struct{ V bool }{}, url.Values{"V": {"false"}}},
 
 		// simple non-zero values
-		{struct{ V string }{"v"}, url.Values{"V": {"v"}}},
-		{struct{ V int }{1}, url.Values{"V": {"1"}}},
-		{struct{ V uint }{1}, url.Values{"V": {"1"}}},
-		{struct{ V float32 }{0.1}, url.Values{"V": {"0.1"}}},
-		{struct{ V bool }{true}, url.Values{"V": {"true"}}},
+		{"userTag", struct{ V string }{"v"}, url.Values{"V": {"v"}}},
+		{"userTag", struct{ V int }{1}, url.Values{"V": {"1"}}},
+		{"userTag", struct{ V uint }{1}, url.Values{"V": {"1"}}},
+		{"userTag", struct{ V float32 }{0.1}, url.Values{"V": {"0.1"}}},
+		{"userTag", struct{ V bool }{true}, url.Values{"V": {"true"}}},
 
 		// bool-specific options
 		{
+			"url",
 			struct {
 				V bool `url:",int"`
 			}{false},
 			url.Values{"V": {"0"}},
 		},
 		{
+			"url",
 			struct {
 				V bool `url:",int"`
 			}{true},
@@ -61,30 +64,35 @@ func TestValues_BasicTypes(t *testing.T) {
 
 		// time values
 		{
+			"",
 			struct {
 				V time.Time
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"2000-01-01T12:34:56Z"}},
 		},
 		{
+			"url",
 			struct {
 				V time.Time `url:",unix"`
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"946730096"}},
 		},
 		{
+			"url",
 			struct {
 				V time.Time `url:",unixmilli"`
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"946730096000"}},
 		},
 		{
+			"url",
 			struct {
 				V time.Time `url:",unixnano"`
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
 			url.Values{"V": {"946730096000000000"}},
 		},
 		{
+			"url",
 			struct {
 				V time.Time `layout:"2006-01-02"`
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
@@ -93,7 +101,7 @@ func TestValues_BasicTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, tt.myTag, tt.input, tt.want)
 	}
 }
 
@@ -129,7 +137,7 @@ func TestValues_Pointers(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "url", tt.input, tt.want)
 	}
 }
 
@@ -268,7 +276,7 @@ func TestValues_Slices(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "url", tt.input, tt.want)
 	}
 }
 
@@ -325,7 +333,7 @@ func TestValues_NestedTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "url", tt.input, tt.want)
 	}
 }
 
@@ -365,7 +373,7 @@ func TestValues_OmitEmpty(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "url", tt.input, tt.want)
 	}
 }
 
@@ -420,12 +428,12 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "url", tt.input, tt.want)
 	}
 }
 
 func TestValues_InvalidInput(t *testing.T) {
-	_, err := Values("")
+	_, err := Values("", "")
 	if err == nil {
 		t.Errorf("expected Values() to return an error on invalid input")
 	}
@@ -480,7 +488,7 @@ func TestValues_CustomEncodingSlice(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "", tt.input, tt.want)
 	}
 }
 
@@ -504,7 +512,7 @@ func TestValues_CustomEncoding_Error(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		_, err := Values(tt.input)
+		_, err := Values("", tt.input)
 		if err == nil {
 			t.Errorf("Values(%q) did not return expected encoding error", tt.input)
 		}
@@ -574,7 +582,7 @@ func TestValues_CustomEncodingInt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "", tt.input, tt.want)
 	}
 }
 
@@ -657,7 +665,7 @@ func TestValues_CustomEncodingPointer(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testValue(t, tt.input, tt.want)
+		testValue(t, "", tt.input, tt.want)
 	}
 }
 
