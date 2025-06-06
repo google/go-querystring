@@ -16,7 +16,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [stable, oldstable]
+        go-version: [stable, oldstable, "1.13"]
         platform: [ubuntu-latest]
         include:
           # only update test coverage stats with most recent go version on linux
