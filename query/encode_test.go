@@ -745,3 +745,35 @@ func TestParseTag(t *testing.T) {
 		}
 	}
 }
+
+type customStructString struct {
+	v string
+}
+
+func (s customStructString) String() string {
+	return s.v
+}
+
+func TestValues_CustomStructStringValue(t *testing.T) {
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			struct {
+				V customStructString `url:"v,string"`
+			}{customStructString{"a"}},
+			url.Values{"v": {"a"}},
+		},
+		{
+			struct {
+				V customStructString `url:"v"`
+			}{},
+			url.Values{},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
