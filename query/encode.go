@@ -244,6 +244,8 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					k := name
 					if opts.Contains("numbered") {
 						k = fmt.Sprintf("%s%d", name, i)
+					} else if opts.Contains("spotnumbered") {
+						k = fmt.Sprintf("%s.%d", name, i+1)
 					}
 					values.Add(k, valueString(sv.Index(i), opts, sf))
 				}
