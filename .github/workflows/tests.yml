@@ -36,4 +36,4 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.update-coverage }}
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d #v5.4.2
+        uses: codecov/codecov-action@fdcc8476540edceab3de004e990f80d881c6cc00 #v5.5.0
