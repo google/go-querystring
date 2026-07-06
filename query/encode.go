@@ -186,6 +186,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			continue
 		}
 
+		// unwrap interface values so the concrete type's Encoder is used
+		if sv.Kind() == reflect.Interface && !sv.IsNil() {
+			sv = sv.Elem()
+		}
+
 		if sv.Type().Implements(encoderType) {
 			// if sv is a nil pointer and the custom encoder is defined on a non-pointer
 			// method receiver, set sv to the zero value of the underlying type

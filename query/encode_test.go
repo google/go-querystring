@@ -477,6 +477,14 @@ func TestValues_CustomEncodingSlice(t *testing.T) {
 			}{(*customEncodedStrings)(&[]string{"a", "b"})},
 			url.Values{"v.0": {"a"}, "v.1": {"b"}},
 		},
+
+		// custom encoded type held in an interface field
+		{
+			struct {
+				V interface{} `url:"v"`
+			}{customEncodedStrings{"a", "b"}},
+			url.Values{"v.0": {"a"}, "v.1": {"b"}},
+		},
 	}
 
 	for _, tt := range tests {
