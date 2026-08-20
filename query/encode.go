@@ -49,7 +49,7 @@ type Encoder interface {
 //   - the field's tag is "-", or
 //   - the field is empty and its tag specifies the "omitempty" option
 //
-// The empty values are false, 0, any nil pointer or interface value, any array
+// The empty values are false, 0, any nil pointer or interface value, any array,
 // slice, map, or string of length zero, and any type (such as time.Time) that
 // returns true for IsZero().
 //
@@ -65,7 +65,7 @@ type Encoder interface {
 //	Field int `url:"myName"`
 //
 //	// Field appears as URL parameter "myName" and the field is omitted if
-//	// its value is empty
+//	// its value is empty.
 //	Field int `url:"myName,omitempty"`
 //
 //	// Field appears as URL parameter "Field" (the default), but the field
