@@ -198,6 +198,13 @@ func TestValues_Slices(t *testing.T) {
 			url.Values{"V0": {"a"}, "V1": {"b"}},
 		},
 
+		{
+			struct {
+				V []string `url:",indexed"`
+			}{[]string{"a", "b"}},
+			url.Values{"V[0]": {"a"}, "V[1]": {"b"}},
+		},
+
 		// arrays of strings
 		{
 			struct{ V [2]string }{},
@@ -329,6 +336,107 @@ func TestValues_NestedTypes(t *testing.T) {
 	}
 }
 
+func TestValues_ArrayIndexNestedTypes(t *testing.T) {
+	type AnotherSubNested struct {
+		AnotherValue string `url:"d"`
+	}
+
+	type SubNested struct {
+		Value string             `url:"value"`
+		D     []AnotherSubNested `url:"anotherSubNested,indexed"`
+	}
+
+	type Nested struct {
+		C []SubNested `url:",indexed"`
+	}
+
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			Nested{
+				[]SubNested{
+					{"value0", []AnotherSubNested{}},
+					{"value1", []AnotherSubNested{}},
+					{"value2", []AnotherSubNested{}},
+					{"value3", []AnotherSubNested{{"value0"}}},
+				},
+			},
+			url.Values{
+				"C[0][value]":                  {"value0"},
+				"C[1][value]":                  {"value1"},
+				"C[2][value]":                  {"value2"},
+				"C[3][value]":                  {"value3"},
+				"C[3][anotherSubNested][0][d]": {"value0"},
+			},
+		},
+		{
+			Nested{
+				[]SubNested{
+					{"value0", []AnotherSubNested{}},
+					{"value1", []AnotherSubNested{}},
+					{"value2", nil},
+					{"value3", []AnotherSubNested{{"value0"}}},
+				},
+			},
+			url.Values{
+				"C[0][value]":                  {"value0"},
+				"C[1][value]":                  {"value1"},
+				"C[2][value]":                  {"value2"},
+				"C[3][value]":                  {"value3"},
+				"C[3][anotherSubNested][0][d]": {"value0"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
+/**
+ * Example taken from the author of Original Issue https://github.com/google/go-querystring/issues/8
+ */
+func TestValues_ArrayIndexNestedTypes_GithubIssue_Number_8(t *testing.T) {
+	type Nested struct {
+		A string `url:"theA,omitempty"`
+		B string `url:"theB,omitempty"`
+	}
+
+	type NestedArr []Nested
+
+	type Main struct {
+		A NestedArr `url:"arr,indexed"`
+		B Nested    `url:"nested"`
+	}
+
+	tests := []struct {
+		input interface{}
+		want  url.Values
+	}{
+		{
+			Main{
+				NestedArr{{"aa", "bb"}, {"aaa", "bbb"}},
+				Nested{"xx", "zz"},
+			},
+
+			url.Values{
+				"arr[0][theA]": {"aa"},
+				"arr[0][theB]": {"bb"},
+				"arr[1][theA]": {"aaa"},
+				"arr[1][theB]": {"bbb"},
+				"nested[theA]": {"xx"},
+				"nested[theB]": {"zz"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		testValue(t, tt.input, tt.want)
+	}
+}
+
 func TestValues_OmitEmpty(t *testing.T) {
 	str := ""
 
@@ -404,6 +512,7 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 			url.Values{"V": {"a"}},
 		},
 		{
+			// This step would happen before anything else, so we need not worry about it
 			Mixed{Inner: Inner{V: "a"}, V: "b"},
 			url.Values{"V": {"b", "a"}},
 		},
