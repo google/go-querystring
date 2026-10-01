@@ -753,3 +753,285 @@ func TestParseTag(t *testing.T) {
 		}
 	}
 }
+
+func TestValues_EncodingCase(t *testing.T) {
+	type TestStruct struct {
+		FirstName  string
+		UserID     int
+		HTTPServer string
+		URL        string
+		User2Name  string
+		FieldX     string
+		CustomName string `url:"custom_param"`
+		OmitEmpty  string `url:",omitempty"`
+	}
+
+	input := TestStruct{
+		FirstName:  "Alice",
+		UserID:     123,
+		HTTPServer: "nginx",
+		URL:        "example.com",
+		User2Name:  "bob",
+		FieldX:     "x",
+		CustomName: "custom",
+	}
+
+	// CaseDefault (and without options)
+	wantDefault := url.Values{
+		"FirstName":    {"Alice"},
+		"UserID":       {"123"},
+		"HTTPServer":   {"nginx"},
+		"URL":          {"example.com"},
+		"User2Name":    {"bob"},
+		"FieldX":       {"x"},
+		"custom_param": {"custom"},
+	}
+	testValue(t, input, wantDefault)
+
+	vDefault, err := Values(input, Options{EncodingCase: CaseDefault})
+	if err != nil {
+		t.Fatalf("Values with CaseDefault failed: %v", err)
+	}
+	if diff := cmp.Diff(wantDefault, vDefault); diff != "" {
+		t.Errorf("Values with CaseDefault mismatch:\n%s", diff)
+	}
+
+	// CaseSnake and CASE_SNAKE
+	wantSnake := url.Values{
+		"first_name":   {"Alice"},
+		"user_id":      {"123"},
+		"http_server":  {"nginx"},
+		"url":          {"example.com"},
+		"user2_name":   {"bob"},
+		"field_x":      {"x"},
+		"custom_param": {"custom"},
+	}
+	vSnake, err := Values(input, Options{EncodingCase: CaseSnake})
+	if err != nil {
+		t.Fatalf("Values with CaseSnake failed: %v", err)
+	}
+	if diff := cmp.Diff(wantSnake, vSnake); diff != "" {
+		t.Errorf("Values with CaseSnake mismatch:\n%s", diff)
+	}
+	vSnakeCompat, err := ValuesWithOptions(input, Options{EncodingCase: CASE_SNAKE})
+	if err != nil {
+		t.Fatalf("ValuesWithOptions with CASE_SNAKE failed: %v", err)
+	}
+	if diff := cmp.Diff(wantSnake, vSnakeCompat); diff != "" {
+		t.Errorf("ValuesWithOptions with CASE_SNAKE mismatch:\n%s", diff)
+	}
+
+	// CaseCamel and CASE_CAMEL
+	wantCamel := url.Values{
+		"firstName":    {"Alice"},
+		"userId":       {"123"},
+		"httpServer":   {"nginx"},
+		"url":          {"example.com"},
+		"user2Name":    {"bob"},
+		"fieldX":       {"x"},
+		"custom_param": {"custom"},
+	}
+	vCamel, err := Values(input, Options{EncodingCase: CaseCamel})
+	if err != nil {
+		t.Fatalf("Values with CaseCamel failed: %v", err)
+	}
+	if diff := cmp.Diff(wantCamel, vCamel); diff != "" {
+		t.Errorf("Values with CaseCamel mismatch:\n%s", diff)
+	}
+	vCamelCompat, err := Values(input, Options{EncodingCase: CASE_CAMEL})
+	if err != nil {
+		t.Fatalf("Values with CASE_CAMEL failed: %v", err)
+	}
+	if diff := cmp.Diff(wantCamel, vCamelCompat); diff != "" {
+		t.Errorf("Values with CASE_CAMEL mismatch:\n%s", diff)
+	}
+
+	// CaseKebab and CASE_KEBAB
+	wantKebab := url.Values{
+		"first-name":   {"Alice"},
+		"user-id":      {"123"},
+		"http-server":  {"nginx"},
+		"url":          {"example.com"},
+		"user2-name":   {"bob"},
+		"field-x":      {"x"},
+		"custom_param": {"custom"},
+	}
+	vKebab, err := Values(input, Options{EncodingCase: CaseKebab})
+	if err != nil {
+		t.Fatalf("Values with CaseKebab failed: %v", err)
+	}
+	if diff := cmp.Diff(wantKebab, vKebab); diff != "" {
+		t.Errorf("Values with CaseKebab mismatch:\n%s", diff)
+	}
+	vKebabCompat, err := Values(input, Options{EncodingCase: CASE_KEBAB})
+	if err != nil {
+		t.Fatalf("Values with CASE_KEBAB failed: %v", err)
+	}
+	if diff := cmp.Diff(wantKebab, vKebabCompat); diff != "" {
+		t.Errorf("Values with CASE_KEBAB mismatch:\n%s", diff)
+	}
+
+	// CasePascal and CASE_PASCAL
+	wantPascal := url.Values{
+		"FirstName":    {"Alice"},
+		"UserId":       {"123"},
+		"HttpServer":   {"nginx"},
+		"Url":          {"example.com"},
+		"User2Name":    {"bob"},
+		"FieldX":       {"x"},
+		"custom_param": {"custom"},
+	}
+	vPascal, err := Values(input, Options{EncodingCase: CasePascal})
+	if err != nil {
+		t.Fatalf("Values with CasePascal failed: %v", err)
+	}
+	if diff := cmp.Diff(wantPascal, vPascal); diff != "" {
+		t.Errorf("Values with CasePascal mismatch:\n%s", diff)
+	}
+	vPascalCompat, err := Values(input, Options{EncodingCase: CASE_PASCAL})
+	if err != nil {
+		t.Fatalf("Values with CASE_PASCAL failed: %v", err)
+	}
+	if diff := cmp.Diff(wantPascal, vPascalCompat); diff != "" {
+		t.Errorf("Values with CASE_PASCAL mismatch:\n%s", diff)
+	}
+
+	// Unknown Case fallback
+	vUnknown, err := Values(input, Options{EncodingCase: Case(99)})
+	if err != nil {
+		t.Fatalf("Values with unknown Case failed: %v", err)
+	}
+	if len(vUnknown) == 0 {
+		t.Errorf("Values with unknown Case returned empty")
+	}
+}
+
+func TestValues_TagCasing(t *testing.T) {
+	type TaggedStruct struct {
+		FieldOne   string `url:",snake"`
+		FieldTwo   string `url:",camel"`
+		FieldThree string `url:",kebab"`
+		FieldFour  string `url:",pascal"`
+		FieldFive  string `url:"explicit_name,camel"`
+	}
+
+	input := TaggedStruct{
+		FieldOne:   "one",
+		FieldTwo:   "two",
+		FieldThree: "three",
+		FieldFour:  "four",
+		FieldFive:  "five",
+	}
+
+	want := url.Values{
+		"field_one":     {"one"},
+		"fieldTwo":      {"two"},
+		"field-three":   {"three"},
+		"FieldFour":     {"four"},
+		"explicit_name": {"five"},
+	}
+
+	testValue(t, input, want)
+}
+
+func TestValues_NestedCasing(t *testing.T) {
+	type Address struct {
+		StreetName string
+		PostalCode int
+	}
+	type User struct {
+		HomeAddress Address
+		UserProfile struct {
+			DisplayName string
+		}
+	}
+
+	input := User{
+		HomeAddress: Address{
+			StreetName: "Main St",
+			PostalCode: 12345,
+		},
+		UserProfile: struct {
+			DisplayName string
+		}{
+			DisplayName: "Alice",
+		},
+	}
+
+	wantSnake := url.Values{
+		"home_address[street_name]":  {"Main St"},
+		"home_address[postal_code]":  {"12345"},
+		"user_profile[display_name]": {"Alice"},
+	}
+
+	vSnake, err := Values(input, Options{EncodingCase: CaseSnake})
+	if err != nil {
+		t.Fatalf("Values nested with CaseSnake failed: %v", err)
+	}
+	if diff := cmp.Diff(wantSnake, vSnake); diff != "" {
+		t.Errorf("Values nested with CaseSnake mismatch:\n%s", diff)
+	}
+
+	wantCamel := url.Values{
+		"homeAddress[streetName]":  {"Main St"},
+		"homeAddress[postalCode]":  {"12345"},
+		"userProfile[displayName]": {"Alice"},
+	}
+
+	vCamel, err := Values(input, Options{EncodingCase: CaseCamel})
+	if err != nil {
+		t.Fatalf("Values nested with CaseCamel failed: %v", err)
+	}
+	if diff := cmp.Diff(wantCamel, vCamel); diff != "" {
+		t.Errorf("Values nested with CaseCamel mismatch:\n%s", diff)
+	}
+}
+
+func TestValues_EmbeddedCasing(t *testing.T) {
+	type Inner struct {
+		StreetName string
+	}
+	type Outer struct {
+		Inner
+		UserName string
+	}
+
+	input := Outer{
+		Inner:    Inner{StreetName: "Main St"},
+		UserName: "Alice",
+	}
+
+	wantSnake := url.Values{
+		"street_name": {"Main St"},
+		"user_name":   {"Alice"},
+	}
+
+	vSnake, err := Values(input, Options{EncodingCase: CaseSnake})
+	if err != nil {
+		t.Fatalf("Values embedded with CaseSnake failed: %v", err)
+	}
+	if diff := cmp.Diff(wantSnake, vSnake); diff != "" {
+		t.Errorf("Values embedded with CaseSnake mismatch:\n%s", diff)
+	}
+}
+
+func TestApplyCase_EdgeCases(t *testing.T) {
+	if got := applyCase("", CaseSnake); got != "" {
+		t.Errorf("applyCase(\"\") = %q, want \"\"", got)
+	}
+	if got := applyCase("___", CaseSnake); got != "" {
+		t.Errorf("applyCase(\"___\") = %q, want \"\"", got)
+	}
+	if got := applyCase("a_b-c d", CaseSnake); got != "a_b_c_d" {
+		t.Errorf("applyCase(\"a_b-c d\") = %q, want \"a_b_c_d\"", got)
+	}
+	if got := applyCase("A_B", CaseCamel); got != "aB" {
+		t.Errorf("applyCase(\"A_B\") = %q, want \"aB\"", got)
+	}
+	if got := applyCase("a_b", CasePascal); got != "AB" {
+		t.Errorf("applyCase(\"a_b\") = %q, want \"AB\"", got)
+	}
+	if got := formatWords(nil, CaseSnake); got != "" {
+		t.Errorf("formatWords(nil) = %q, want \"\"", got)
+	}
+}

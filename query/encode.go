@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var timeType = reflect.TypeOf(time.Time{})
@@ -37,6 +38,36 @@ var encoderType = reflect.TypeOf(new(Encoder)).Elem()
 // itself into URL values in a non-standard way.
 type Encoder interface {
 	EncodeValues(key string, v *url.Values) error
+}
+
+// Case defines the struct field name casing format used when encoding query parameters.
+type Case int
+
+const (
+	// CaseDefault uses the struct field's name as defined in the struct (usually PascalCase).
+	CaseDefault Case = iota
+	// CaseCamel converts struct field names to camelCase (e.g. "firstName", "userId").
+	CaseCamel
+	// CaseSnake converts struct field names to snake_case (e.g. "first_name", "user_id").
+	CaseSnake
+	// CasePascal converts struct field names to PascalCase (e.g. "FirstName", "UserId").
+	CasePascal
+	// CaseKebab converts struct field names to kebab-case (e.g. "first-name", "user-id").
+	CaseKebab
+)
+
+// Uppercase constants for compatibility with Issue #86 specification.
+const (
+	CASE_DEFAULT = CaseDefault
+	CASE_CAMEL   = CaseCamel
+	CASE_SNAKE   = CaseSnake
+	CASE_PASCAL  = CasePascal
+	CASE_KEBAB   = CaseKebab
+)
+
+// Options specifies optional configuration parameters for encoding query values.
+type Options struct {
+	EncodingCase Case
 }
 
 // Values returns the url.Values encoding of v.
@@ -122,7 +153,16 @@ type Encoder interface {
 //
 // Multiple fields that encode to the same URL parameter name will be included
 // as multiple URL values of the same name.
-func Values(v interface{}) (url.Values, error) {
+func Values(v interface{}, opts ...Options) (url.Values, error) {
+	var opt Options
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	return ValuesWithOptions(v, opt)
+}
+
+// ValuesWithOptions returns the url.Values encoding of v with the specified Options.
+func ValuesWithOptions(v interface{}, opts Options) (url.Values, error) {
 	values := make(url.Values)
 
 	if v == nil {
@@ -141,14 +181,14 @@ func Values(v interface{}) (url.Values, error) {
 		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
-	err := reflectValue(values, val, "")
+	err := reflectValue(values, val, "", opts)
 	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value, scope string) error {
+func reflectValue(values url.Values, val reflect.Value, scope string, options Options) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -176,6 +216,17 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			}
 
 			name = sf.Name
+			if opts.Contains("snake") {
+				name = applyCase(name, CaseSnake)
+			} else if opts.Contains("camel") {
+				name = applyCase(name, CaseCamel)
+			} else if opts.Contains("kebab") {
+				name = applyCase(name, CaseKebab)
+			} else if opts.Contains("pascal") {
+				name = applyCase(name, CasePascal)
+			} else if options.EncodingCase != CaseDefault {
+				name = applyCase(name, options.EncodingCase)
+			}
 		}
 
 		if scope != "" {
@@ -262,7 +313,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, name); err != nil {
+			if err := reflectValue(values, sv, name, options); err != nil {
 				return err
 			}
 			continue
@@ -272,7 +323,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	}
 
 	for _, f := range embedded {
-		if err := reflectValue(values, f, scope); err != nil {
+		if err := reflectValue(values, f, scope, options); err != nil {
 			return err
 		}
 	}
@@ -364,4 +415,97 @@ func (o tagOptions) Contains(option string) bool {
 		}
 	}
 	return false
+}
+
+// applyCase converts name to the requested Case format.
+func applyCase(name string, c Case) string {
+	if c == CaseDefault || name == "" {
+		return name
+	}
+	return formatWords(splitWords(name), c)
+}
+
+func splitWords(s string) []string {
+	var words []string
+	var word []rune
+	runes := []rune(s)
+
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+		if r == '_' || r == '-' || r == ' ' {
+			if len(word) > 0 {
+				words = append(words, string(word))
+				word = word[:0]
+			}
+			continue
+		}
+
+		if i > 0 {
+			prev := runes[i-1]
+			if unicode.IsUpper(r) && (unicode.IsLower(prev) || unicode.IsDigit(prev)) {
+				if len(word) > 0 {
+					words = append(words, string(word))
+					word = word[:0]
+				}
+			} else if unicode.IsUpper(prev) && unicode.IsUpper(r) && i+1 < len(runes) && unicode.IsLower(runes[i+1]) {
+				if len(word) > 0 {
+					words = append(words, string(word))
+					word = word[:0]
+				}
+			}
+		}
+
+		word = append(word, r)
+	}
+
+	if len(word) > 0 {
+		words = append(words, string(word))
+	}
+	return words
+}
+
+func formatWords(words []string, c Case) string {
+	if len(words) == 0 {
+		return ""
+	}
+	switch c {
+	case CaseSnake:
+		parts := make([]string, len(words))
+		for i, w := range words {
+			parts[i] = strings.ToLower(w)
+		}
+		return strings.Join(parts, "_")
+	case CaseKebab:
+		parts := make([]string, len(words))
+		for i, w := range words {
+			parts[i] = strings.ToLower(w)
+		}
+		return strings.Join(parts, "-")
+	case CaseCamel:
+		var b strings.Builder
+		for i, w := range words {
+			runes := []rune(w)
+			if i == 0 {
+				b.WriteString(strings.ToLower(w))
+			} else {
+				b.WriteString(string(unicode.ToUpper(runes[0])))
+				if len(runes) > 1 {
+					b.WriteString(strings.ToLower(string(runes[1:])))
+				}
+			}
+		}
+		return b.String()
+	case CasePascal:
+		var b strings.Builder
+		for _, w := range words {
+			runes := []rune(w)
+			b.WriteString(string(unicode.ToUpper(runes[0])))
+			if len(runes) > 1 {
+				b.WriteString(strings.ToLower(string(runes[1:])))
+			}
+		}
+		return b.String()
+	default:
+		return strings.Join(words, "")
+	}
 }
