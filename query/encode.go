@@ -302,7 +302,10 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 			return strconv.FormatInt(t.Unix(), 10)
 		}
 		if opts.Contains("unixmilli") {
-			return strconv.FormatInt((t.UnixNano() / 1e6), 10)
+			// UnixNano divided by 1e6 truncates toward zero, so a time
+			// in the millisecond before 1970 is encoded one millisecond high.
+			ms := t.Unix()*1e3 + int64(t.Nanosecond())/1e6
+			return strconv.FormatInt(ms, 10)
 		}
 		if opts.Contains("unixnano") {
 			return strconv.FormatInt(t.UnixNano(), 10)
