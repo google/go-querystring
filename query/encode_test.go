@@ -79,6 +79,14 @@ func TestValues_BasicTypes(t *testing.T) {
 			url.Values{"V": {"946730096000"}},
 		},
 		{
+			// One nanosecond after 1969-12-31 23:59:59 is still the
+			// millisecond that starts at -1000.
+			struct {
+				V time.Time `url:",unixmilli"`
+			}{time.Date(1969, 12, 31, 23, 59, 59, 1, time.UTC)},
+			url.Values{"V": {"-1000"}},
+		},
+		{
 			struct {
 				V time.Time `url:",unixnano"`
 			}{time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)},
