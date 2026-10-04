@@ -118,6 +118,13 @@ type Encoder interface {
 //
 //	"user[name]=acme&user[addr][postcode]=1234&user[addr][city]=SFO"
 //
+// Including the "del" struct tag (separate from the "url" tag) or the "dot"
+// option will use that delimiter instead of brackets for scoping nested
+// struct fields. For example:
+//
+//	// Field encoded as "user.name=acme&user.addr.postcode=1234&user.addr.city=SFO"
+//	User User `url:"user,dot"`
+//
 // All other values are encoded using their default string representation.
 //
 // Multiple fields that encode to the same URL parameter name will be included
@@ -141,14 +148,14 @@ func Values(v interface{}) (url.Values, error) {
 		return nil, fmt.Errorf("query: Values() expects struct input. Got %v", val.Kind())
 	}
 
-	err := reflectValue(values, val, "")
+	err := reflectValue(values, val, "", "")
 	return values, err
 }
 
 // reflectValue populates the values parameter from the struct fields in val.
 // Embedded structs are followed recursively (using the rules defined in the
 // Values function documentation) breadth-first.
-func reflectValue(values url.Values, val reflect.Value, scope string) error {
+func reflectValue(values url.Values, val reflect.Value, scope, scopeDel string) error {
 	var embedded []reflect.Value
 
 	typ := val.Type()
@@ -178,8 +185,20 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			name = sf.Name
 		}
 
+		fieldDel := sf.Tag.Get("del")
+		if fieldDel == "" && opts.Contains("dot") {
+			fieldDel = "."
+		}
+		if fieldDel == "" {
+			fieldDel = scopeDel
+		}
+
 		if scope != "" {
-			name = scope + "[" + name + "]"
+			if scopeDel != "" {
+				name = scope + scopeDel + name
+			} else {
+				name = scope + "[" + name + "]"
+			}
 		}
 
 		if opts.Contains("omitempty") && isEmptyValue(sv) {
@@ -262,7 +281,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 
 		if sv.Kind() == reflect.Struct {
-			if err := reflectValue(values, sv, name); err != nil {
+			if err := reflectValue(values, sv, name, fieldDel); err != nil {
 				return err
 			}
 			continue
@@ -272,7 +291,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	}
 
 	for _, f := range embedded {
-		if err := reflectValue(values, f, scope); err != nil {
+		if err := reflectValue(values, f, scope, scopeDel); err != nil {
 			return err
 		}
 	}
