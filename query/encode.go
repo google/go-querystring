@@ -154,8 +154,14 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 	typ := val.Type()
 	for i := 0; i < typ.NumField(); i++ {
 		sf := typ.Field(i)
-		if sf.PkgPath != "" && !sf.Anonymous { // unexported
-			continue
+		if sf.PkgPath != "" { // unexported
+			embeddedType := sf.Type
+			if embeddedType.Kind() == reflect.Ptr {
+				embeddedType = embeddedType.Elem()
+			}
+			if !sf.Anonymous || embeddedType.Kind() != reflect.Struct {
+				continue
+			}
 		}
 
 		sv := val.Field(i)
