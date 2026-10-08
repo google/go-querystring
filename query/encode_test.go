@@ -424,6 +424,96 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}
 }
 
+func TestValues_UnexportedEmbeddedFields(t *testing.T) {
+	type privateString string
+	type PublicString string
+	type privateStruct struct {
+		Limit int `url:"limit"`
+	}
+	value := privateString("private")
+	tests := []struct {
+		name  string
+		input interface{}
+		want  url.Values
+	}{
+		{
+			"scalar",
+			struct {
+				privateString
+				Page int `url:"page"`
+			}{value, 2},
+			url.Values{"page": {"2"}},
+		},
+		{
+			"scalar pointer",
+			struct {
+				*privateString
+				Page int `url:"page"`
+			}{&value, 2},
+			url.Values{"page": {"2"}},
+		},
+		{
+			"nil scalar pointer",
+			struct {
+				*privateString
+				Page int `url:"page"`
+			}{nil, 2},
+			url.Values{"page": {"2"}},
+		},
+		{
+			"tagged scalar",
+			struct {
+				privateString `url:"private"`
+				Page          int `url:"page"`
+			}{value, 2},
+			url.Values{"page": {"2"}},
+		},
+		{
+			"custom encoder",
+			struct {
+				customEncodedStrings
+				Page int `url:"page"`
+			}{customEncodedStrings{"private"}, 2},
+			url.Values{"page": {"2"}},
+		},
+		{
+			"exported scalar",
+			struct {
+				PublicString
+				Page int `url:"page"`
+			}{"public", 2},
+			url.Values{"PublicString": {"public"}, "page": {"2"}},
+		},
+		{
+			"promoted struct field",
+			struct {
+				privateStruct
+				Page int `url:"page"`
+			}{privateStruct{Limit: 3}, 2},
+			url.Values{"limit": {"3"}, "page": {"2"}},
+		},
+		{
+			"promoted pointer field",
+			struct {
+				*privateStruct
+				Page int `url:"page"`
+			}{&privateStruct{Limit: 3}, 2},
+			url.Values{"limit": {"3"}, "page": {"2"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if err := recover(); err != nil {
+					t.Fatalf("Values panicked: %v", err)
+				}
+			}()
+			testValue(t, tt.input, tt.want)
+		})
+	}
+}
+
 func TestValues_InvalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
