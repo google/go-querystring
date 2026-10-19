@@ -669,6 +669,39 @@ func TestValues_CustomEncodingPointer(t *testing.T) {
 	}
 }
 
+// customEncoder is an interface that embeds Encoder.
+type customEncoder interface {
+	Encoder
+}
+
+// TestValues_NilEncoderInterface verifies that a nil interface field whose
+// type implements Encoder is skipped instead of panicking, and that a non-nil
+// value is still encoded normally.
+func TestValues_NilEncoderInterface(t *testing.T) {
+	type st struct {
+		V customEncoder
+	}
+
+	// nil interface field: nothing to encode, must not panic
+	v, err := Values(st{})
+	if err != nil {
+		t.Fatalf("Values() returned error: %v", err)
+	}
+	if len(v) != 0 {
+		t.Errorf("Values() = %v, want no values for a nil interface field", v)
+	}
+
+	// non-nil interface field still uses the concrete encoder
+	v, err = Values(st{V: customEncodedStrings{"a"}})
+	if err != nil {
+		t.Fatalf("Values() returned error: %v", err)
+	}
+	want := url.Values{"V.0": {"a"}}
+	if diff := cmp.Diff(want, v); diff != "" {
+		t.Errorf("Values() mismatch:\n%s", diff)
+	}
+}
+
 func TestIsEmptyValue(t *testing.T) {
 	str := "string"
 	tests := []struct {
