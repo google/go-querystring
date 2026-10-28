@@ -165,6 +165,10 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 		}
 		name, opts := parseTag(tag)
 
+		if opts.Contains("omitempty") && isEmptyValue(sv) {
+			continue
+		}
+
 		if name == "" {
 			if sf.Anonymous {
 				v := reflect.Indirect(sv)
@@ -180,10 +184,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 		if scope != "" {
 			name = scope + "[" + name + "]"
-		}
-
-		if opts.Contains("omitempty") && isEmptyValue(sv) {
-			continue
 		}
 
 		// unwrap interface values so the concrete type's Encoder is used
@@ -332,6 +332,10 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Float() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
+	}
+
+	if !v.CanInterface() {
+		return false
 	}
 
 	type zeroable interface {
