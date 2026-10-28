@@ -424,6 +424,56 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 	}
 }
 
+// OptionalEmbedded supports omitting all of its promoted fields.
+type OptionalEmbedded struct {
+	Value string `url:"value"`
+}
+
+func (v OptionalEmbedded) IsZero() bool { return v.Value == "" }
+
+func TestValues_EmbeddedOmitEmpty(t *testing.T) {
+	type Options struct {
+		OptionalEmbedded `url:",omitempty"`
+	}
+	type privateScalar string
+	type privateEmbedded struct {
+		Value string `url:"value"`
+	}
+	tests := []struct {
+		name  string
+		input interface{}
+		want  url.Values
+	}{
+		{"empty", Options{}, url.Values{}},
+		{"nonempty", Options{OptionalEmbedded{Value: "present"}}, url.Values{"value": {"present"}}},
+		{"without option", struct{ OptionalEmbedded }{}, url.Values{"value": {""}}},
+		{"named empty", struct {
+			OptionalEmbedded `url:"nested,omitempty"`
+		}{}, url.Values{}},
+		{"named nonempty", struct {
+			OptionalEmbedded `url:"nested,omitempty"`
+		}{OptionalEmbedded{Value: "present"}}, url.Values{"nested[value]": {"present"}}},
+		{"nil pointer", struct {
+			*OptionalEmbedded `url:",omitempty"`
+		}{}, url.Values{}},
+		{"non-nil pointer", struct {
+			*OptionalEmbedded `url:",omitempty"`
+		}{&OptionalEmbedded{}}, url.Values{"value": {""}}},
+		{"empty unexported scalar", struct {
+			privateScalar `url:",omitempty"`
+		}{}, url.Values{}},
+		{"nil unexported pointer", struct {
+			*privateScalar `url:",omitempty"`
+		}{}, url.Values{}},
+		{"unexported embed", struct {
+			privateEmbedded `url:",omitempty"`
+		}{privateEmbedded{Value: "present"}}, url.Values{"value": {"present"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) { testValue(t, tt.input, tt.want) })
+	}
+}
+
 func TestValues_InvalidInput(t *testing.T) {
 	_, err := Values("")
 	if err == nil {
