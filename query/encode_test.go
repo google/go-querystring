@@ -318,6 +318,92 @@ func TestValues_NestedTypes(t *testing.T) {
 				"nest[ptr][value]": {"v"},
 			},
 		},
+
+		// nested struct with custom delimiter (del:"." tag)
+		{
+			struct {
+				Nest Nested `url:"nest" del:"."`
+			}{
+				Nested{
+					A: SubNested{
+						Value: "v",
+					},
+				},
+			},
+			url.Values{
+				"nest.a.value": {"v"},
+				"nest.b":       {""},
+			},
+		},
+
+		// nested struct with dot option
+		{
+			struct {
+				Nest Nested `url:"nest,dot"`
+			}{
+				Nested{
+					A: SubNested{
+						Value: "v",
+					},
+				},
+			},
+			url.Values{
+				"nest.a.value": {"v"},
+				"nest.b":       {""},
+			},
+		},
+
+		// nested struct with arbitrary delimiter
+		{
+			struct {
+				Nest Nested `url:"nest" del:"/"`
+			}{
+				Nested{
+					A: SubNested{
+						Value: "v",
+					},
+				},
+			},
+			url.Values{
+				"nest/a/value": {"v"},
+				"nest/b":       {""},
+			},
+		},
+
+		// issue #79 example: user.name, user.addr.postcode, user.addr.city
+		{
+			struct {
+				User struct {
+					Name string `url:"name"`
+					Addr struct {
+						Postcode string `url:"postcode"`
+						City     string `url:"city"`
+					} `url:"addr"`
+				} `url:"user,dot"`
+			}{
+				struct {
+					Name string `url:"name"`
+					Addr struct {
+						Postcode string `url:"postcode"`
+						City     string `url:"city"`
+					} `url:"addr"`
+				}{
+					Name: "acme",
+					Addr: struct {
+						Postcode string `url:"postcode"`
+						City     string `url:"city"`
+					}{
+						Postcode: "1234",
+						City:     "SFO",
+					},
+				},
+			},
+			url.Values{
+				"user.name":          {"acme"},
+				"user.addr.postcode": {"1234"},
+				"user.addr.city":     {"SFO"},
+			},
+		},
 		{
 			nil,
 			url.Values{},
