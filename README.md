@@ -27,7 +27,7 @@ type Options struct {
 }
 
 opt := Options{ "foo", true, 2 }
-v, _ := query.Values(opt)
+v, _ := query.Values("",opt)
 fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
 ```
 
