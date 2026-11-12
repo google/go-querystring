@@ -265,6 +265,18 @@ func TestValues_Slices(t *testing.T) {
 			}{[]bool{true, false}},
 			url.Values{"V": {"1 0"}},
 		},
+		{
+			struct {
+				V []interface{} `url:",space,int"`
+			}{[]interface{}{true, false}},
+			url.Values{"V": {"1 0"}},
+		},
+		{
+			struct {
+				V []interface{} `layout:"2006-01-02"`
+			}{[]interface{}{time.Date(2026, 10, 18, 0, 0, 0, 0, time.UTC)}},
+			url.Values{"V": {"2026-10-18"}},
+		},
 	}
 
 	for _, tt := range tests {

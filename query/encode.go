@@ -282,7 +282,7 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 
 // valueString returns the string representation of a value.
 func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) string {
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Ptr || (v.Kind() == reflect.Interface && !v.IsNil()) {
 		if v.IsNil() {
 			return ""
 		}
