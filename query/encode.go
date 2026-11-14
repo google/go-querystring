@@ -177,6 +177,10 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 					embedded = append(embedded, v)
 					continue
 				}
+				// a nil pointer to an embedded struct has no fields to promote
+				if sv.Kind() == reflect.Ptr && sv.IsNil() && sv.Type().Elem().Kind() == reflect.Struct {
+					continue
+				}
 			}
 
 			name = sf.Name

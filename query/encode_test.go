@@ -404,6 +404,29 @@ func TestValues_EmbeddedStructs(t *testing.T) {
 			url.Values{"V": {"a"}},
 		},
 		{
+			// nil embedded struct pointer has no fields to encode
+			OuterPtr{},
+			url.Values{},
+		},
+		{
+			struct {
+				*Inner
+				W string
+			}{W: "b"},
+			url.Values{"W": {"b"}},
+		},
+		{
+			struct{ N OuterPtr }{},
+			url.Values{},
+		},
+		{
+			// named embedded struct pointer is encoded like any nil pointer
+			struct {
+				*Inner `url:"inner"`
+			}{},
+			url.Values{"inner": {""}},
+		},
+		{
 			Mixed{Inner: Inner{V: "a"}, V: "b"},
 			url.Values{"V": {"b", "a"}},
 		},
