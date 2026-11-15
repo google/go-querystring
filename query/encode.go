@@ -191,6 +191,11 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 			sv = sv.Elem()
 		}
 
+		// Stop at the first pointer that provides a custom encoding.
+		for sv.Kind() == reflect.Ptr && !sv.IsNil() && !sv.Type().Implements(encoderType) {
+			sv = sv.Elem()
+		}
+
 		if sv.Type().Implements(encoderType) {
 			// if sv is a nil pointer and the custom encoder is defined on a non-pointer
 			// method receiver, set sv to the zero value of the underlying type
@@ -203,14 +208,6 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				return err
 			}
 			continue
-		}
-
-		// recursively dereference pointers. break on nil pointers
-		for sv.Kind() == reflect.Ptr {
-			if sv.IsNil() {
-				break
-			}
-			sv = sv.Elem()
 		}
 
 		if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
