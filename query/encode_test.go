@@ -654,6 +654,14 @@ func (m *customEncodedIntPtr) EncodeValues(key string, v *url.Values) error {
 // Test behavior when encoding is defined for a pointer of a custom type.
 // Custom type should be able to encode values for nil pointers.
 func TestValues_CustomEncodingPointer(t *testing.T) {
+	t.Run("indirect pointer", func(t *testing.T) {
+		c := customEncodedIntPtr(1)
+		ptr := &c
+		testValue(t, struct {
+			V **customEncodedIntPtr `url:"v"`
+		}{&ptr}, url.Values{"v": {"_1"}})
+	})
+
 	var zero customEncodedIntPtr = 0
 	var one customEncodedIntPtr = 1
 	tests := []struct {
