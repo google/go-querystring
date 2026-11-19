@@ -329,6 +329,18 @@ func TestValues_NestedTypes(t *testing.T) {
 	}
 }
 
+type customLimit int
+
+func (l customLimit) IsZero() bool { return l == -1 }
+
+type customString string
+
+func (s customString) IsZero() bool { return s == "unset" }
+
+type customSlice []string
+
+func (s customSlice) IsZero() bool { return len(s) == 1 && s[0] == "empty" }
+
 func TestValues_OmitEmpty(t *testing.T) {
 	str := ""
 
@@ -361,6 +373,48 @@ func TestValues_OmitEmpty(t *testing.T) {
 				V *string `url:",omitempty"`
 			}{&str},
 			url.Values{"V": {""}},
+		},
+		{
+			struct {
+				Limit customLimit `url:"limit,omitempty"`
+			}{customLimit(-1)},
+			url.Values{},
+		},
+		{
+			struct {
+				Limit customLimit `url:"limit,omitempty"`
+			}{customLimit(0)},
+			url.Values{"limit": {"0"}},
+		},
+		{
+			struct {
+				Limit customLimit `url:"limit,omitempty"`
+			}{customLimit(10)},
+			url.Values{"limit": {"10"}},
+		},
+		{
+			struct {
+				Str customString `url:"str,omitempty"`
+			}{customString("unset")},
+			url.Values{},
+		},
+		{
+			struct {
+				Str customString `url:"str,omitempty"`
+			}{customString("hello")},
+			url.Values{"str": {"hello"}},
+		},
+		{
+			struct {
+				Slice customSlice `url:"slice,omitempty"`
+			}{customSlice{"empty"}},
+			url.Values{},
+		},
+		{
+			struct {
+				Slice customSlice `url:"slice,omitempty"`
+			}{customSlice{"a", "b"}},
+			url.Values{"slice": {"a", "b"}},
 		},
 	}
 
@@ -767,6 +821,15 @@ func TestIsEmptyValue(t *testing.T) {
 		// time
 		{time.Time{}, true},
 		{time.Now(), false},
+
+		// custom types with IsZero() method
+		{customLimit(-1), true},
+		{customLimit(0), false},
+		{customLimit(10), false},
+		{customString("unset"), true},
+		{customString("hello"), false},
+		{customSlice{"empty"}, true},
+		{customSlice{"a"}, false},
 
 		// unknown type - always false unless a nil pointer, which are always empty.
 		{(*struct{ int })(nil), true},
