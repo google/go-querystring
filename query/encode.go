@@ -319,6 +319,29 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 // isEmptyValue checks if a value should be considered empty for the purposes
 // of omitting fields with the "omitempty" option.
 func isEmptyValue(v reflect.Value) bool {
+	if !v.IsValid() {
+		return true
+	}
+
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		return v.IsNil()
+	}
+
+	type zeroable interface {
+		IsZero() bool
+	}
+
+	if v.CanInterface() {
+		if z, ok := v.Interface().(zeroable); ok {
+			return z.IsZero()
+		}
+	}
+	if v.CanAddr() {
+		if z, ok := v.Addr().Interface().(zeroable); ok {
+			return z.IsZero()
+		}
+	}
+
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
 		return v.Len() == 0
@@ -330,20 +353,6 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
 		return v.Float() == 0
-	case reflect.Interface, reflect.Ptr:
-		return v.IsNil()
-	}
-
-	if !v.CanInterface() {
-		return false
-	}
-
-	type zeroable interface {
-		IsZero() bool
-	}
-
-	if z, ok := v.Interface().(zeroable); ok {
-		return z.IsZero()
 	}
 
 	return false
