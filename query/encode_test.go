@@ -803,3 +803,29 @@ func TestParseTag(t *testing.T) {
 		}
 	}
 }
+
+func TestValuesNestedStructArray(t *testing.T) {
+	type nested struct {
+		A string `url:"theA,omitempty"`
+		B string `url:"theB,omitempty"`
+	}
+	v := struct {
+		A []nested `url:"arr"`
+	}{
+		A: []nested{{A: "aa", B: "bb"}, {A: "aaa", B: "bbb"}},
+	}
+
+	values, err := Values(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := url.Values{
+		"arr[0][theA]": {"aa"},
+		"arr[0][theB]": {"bb"},
+		"arr[1][theA]": {"aaa"},
+		"arr[1][theB]": {"bbb"},
+	}
+	if !reflect.DeepEqual(values, want) {
+		t.Errorf("Values() = %v, want %v", values, want)
+	}
+}
