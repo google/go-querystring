@@ -246,6 +246,20 @@ func reflectValue(values url.Values, val reflect.Value, scope string) error {
 				values.Add(name, s.String())
 			} else {
 				for i := 0; i < sv.Len(); i++ {
+					elem := sv.Index(i)
+					for elem.Kind() == reflect.Ptr {
+						if elem.IsNil() {
+							break
+						}
+						elem = elem.Elem()
+					}
+					if elem.IsValid() && elem.Kind() == reflect.Struct && elem.Type() != timeType && !elem.Type().Implements(encoderType) {
+						if err := reflectValue(values, elem, fmt.Sprintf("%s[%d]", name, i)); err != nil {
+							return err
+						}
+						continue
+					}
+
 					k := name
 					if opts.Contains("numbered") {
 						k = fmt.Sprintf("%s%d", name, i)
